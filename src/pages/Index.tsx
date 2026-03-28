@@ -16,6 +16,7 @@ import DraftingState from "@/components/DraftingState";
 import DiscoveryRadar from "@/components/DiscoveryRadar";
 import OutreachPanel from "@/components/OutreachPanel";
 import PaywallModal from "@/components/PaywallModal";
+import Footer from "@/components/Footer";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
@@ -133,7 +134,9 @@ const Index = () => {
       <header className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         {/* Auth bar */}
         <div className="relative z-10 flex justify-end px-6 pt-4">
-          {user ? (
+          {authLoading ? (
+            <div className="h-6" /> 
+          ) : user ? (
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-primary-foreground/60">{user.email}</span>
               {creditStatus.balance > 0 && (
@@ -173,7 +176,7 @@ const Index = () => {
               <Sparkles className="h-4 w-4" />
               AI-Powered Resume Translator
             </div>
-            <h1 className="font-display text-5xl font-bold tracking-tight text-primary-foreground sm:text-6xl lg:text-7xl">
+            <h1 className="font-display text-4xl font-bold tracking-tight text-primary-foreground sm:text-5xl lg:text-7xl">
               Resume<span className="text-secondary">Rig</span>
             </h1>
             <p className="mt-2 font-mono text-sm uppercase tracking-[0.2em] text-secondary/80">
@@ -206,8 +209,8 @@ const Index = () => {
           />
           <ResumeInput
             label="Target Job Description"
-            sublabel="The role you're pivoting to"
-            placeholder="Paste the job description for the new role you're targeting..."
+            sublabel="The role you're targeting"
+            placeholder="Paste the job description for the role you're targeting..."
             value={jobDescription}
             onChange={setJobDescription}
             icon={<Target className="h-5 w-5" />}
@@ -269,7 +272,15 @@ const Index = () => {
                 <div className="text-center space-y-4">
                   <p className="font-body text-muted-foreground">
                     Find decision-makers and generate personalized outreach messages.
-                    <span className="font-mono text-xs ml-2 text-secondary">1 Career Credit</span>
+                    {creditStatus.balance > 0 ? (
+                      <span className="font-mono text-xs ml-2 text-secondary">
+                        1 Credit · {creditStatus.balance} remaining
+                      </span>
+                    ) : (
+                      <span className="font-mono text-xs ml-2 text-destructive">
+                        Requires 1 Credit
+                      </span>
+                    )}
                   </p>
                   <Button
                     onClick={handleOutreach}
@@ -287,6 +298,7 @@ const Index = () => {
         )}
       </main>
 
+      <Footer />
       <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} />
     </div>
   );

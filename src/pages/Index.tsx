@@ -118,6 +118,34 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       {/* Hero */}
       <header className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
+        {/* Auth bar */}
+        <div className="relative z-10 flex justify-end px-6 pt-4">
+          {user ? (
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-xs text-primary-foreground/60">{user.email}</span>
+              {creditStatus.balance > 0 && (
+                <span className="font-mono text-xs text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5">
+                  {creditStatus.balance} credits
+                </span>
+              )}
+              <button
+                onClick={signOut}
+                className="flex items-center gap-1 text-xs font-body text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => navigate("/auth")}
+              className="flex items-center gap-1.5 text-sm font-body text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+            >
+              <LogIn className="h-4 w-4" />
+              Sign in
+            </button>
+          )}
+        </div>
         <div className="absolute inset-0 opacity-[0.03]" style={{
           backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(160 10% 97%) 1px, transparent 0)',
           backgroundSize: '32px 32px'

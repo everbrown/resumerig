@@ -16,6 +16,7 @@ import DraftingState from "@/components/DraftingState";
 import DiscoveryRadar from "@/components/DiscoveryRadar";
 import OutreachPanel from "@/components/OutreachPanel";
 import PaywallModal from "@/components/PaywallModal";
+import Footer from "@/components/Footer";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
@@ -173,7 +174,7 @@ const Index = () => {
               <Sparkles className="h-4 w-4" />
               AI-Powered Resume Translator
             </div>
-            <h1 className="font-display text-5xl font-bold tracking-tight text-primary-foreground sm:text-6xl lg:text-7xl">
+            <h1 className="font-display text-4xl font-bold tracking-tight text-primary-foreground sm:text-5xl lg:text-7xl">
               Resume<span className="text-secondary">Rig</span>
             </h1>
             <p className="mt-2 font-mono text-sm uppercase tracking-[0.2em] text-secondary/80">
@@ -295,6 +296,7 @@ const Index = () => {
         )}
       </main>
 
+      <Footer />
       <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} />
     </div>
   );

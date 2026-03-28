@@ -122,7 +122,7 @@ const Index = () => {
         {/* Results */}
         {result && (
           <div className="space-y-10 pb-16">
-            <MatchScore score={result.matchScore} />
+            <MatchScore beforeScore={result.beforeScore} afterScore={result.afterScore} />
 
             <ResultSection number="01" title="Industry Translator Key" delay={0.1}>
               <TranslatorTable entries={result.translatorTable} />

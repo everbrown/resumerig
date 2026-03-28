@@ -47,7 +47,16 @@ const Index = () => {
     }
   }, []);
 
+  const canSubmit = resume.trim().length > 20 && jobDescription.trim().length > 20;
+  const showRadar = jobDescription.trim().length > 30 && !result;
+
   const handleAnalyze = async () => {
+    // Check credit status: first-use-free or has credits
+    if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
+      setShowPaywall(true);
+      return;
+    }
+
     setLoading(true);
     setError("");
     setResult(null);

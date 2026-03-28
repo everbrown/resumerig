@@ -21,6 +21,8 @@ const Index = () => {
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [outreachResult, setOutreachResult] = useState<OutreachResult | null>(null);
+  const [outreachLoading, setOutreachLoading] = useState(false);
   const [error, setError] = useState("");
 
   const canSubmit = resume.trim().length > 20 && jobDescription.trim().length > 20;

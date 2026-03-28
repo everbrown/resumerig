@@ -79,11 +79,12 @@ const Index = () => {
         >
           <ResumeInput
             label="Your Current Resume"
-            sublabel="Paste your existing resume"
-            placeholder="Paste your full resume here — include job titles, responsibilities, and accomplishments..."
+            sublabel="Paste or upload your resume"
+            placeholder="Paste your full resume here — or click Upload File to extract from PDF, Word, or image..."
             value={resume}
             onChange={setResume}
             icon={<FileText className="h-5 w-5" />}
+            allowFileUpload
           />
           <ResumeInput
             label="Target Job Description"

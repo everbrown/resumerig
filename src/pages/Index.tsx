@@ -206,8 +206,8 @@ const Index = () => {
           />
           <ResumeInput
             label="Target Job Description"
-            sublabel="The role you're pivoting to"
-            placeholder="Paste the job description for the new role you're targeting..."
+            sublabel="The role you're targeting"
+            placeholder="Paste the job description for the role you're targeting..."
             value={jobDescription}
             onChange={setJobDescription}
             icon={<Target className="h-5 w-5" />}
@@ -269,7 +269,15 @@ const Index = () => {
                 <div className="text-center space-y-4">
                   <p className="font-body text-muted-foreground">
                     Find decision-makers and generate personalized outreach messages.
-                    <span className="font-mono text-xs ml-2 text-secondary">1 Career Credit</span>
+                    {creditStatus.balance > 0 ? (
+                      <span className="font-mono text-xs ml-2 text-secondary">
+                        1 Credit · {creditStatus.balance} remaining
+                      </span>
+                    ) : (
+                      <span className="font-mono text-xs ml-2 text-destructive">
+                        Requires 1 Credit
+                      </span>
+                    )}
                   </p>
                   <Button
                     onClick={handleOutreach}

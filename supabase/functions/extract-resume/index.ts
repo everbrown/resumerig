@@ -21,6 +21,78 @@ const parseJsonOrText = async (response: Response) => {
   }
 };
 
+const pickFirstString = (...values: unknown[]): string => {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      return value.trim();
+    }
+  }
+  return "";
+};
+
+const extractTextFromChatApi = (parsed: { text: string; json: any }): string => {
+  const { json, text } = parsed;
+
+  const direct = pickFirstString(
+    json?.aiRecord?.aiRecordDetail?.resultText,
+    json?.result,
+    json?.content,
+    json?.output_text,
+    json?.message,
+    json?.data?.text,
+    json?.response?.text,
+    json?.response?.output_text,
+    json?.choices?.[0]?.message?.content,
+    json?.choices?.[0]?.delta?.content,
+  );
+
+  if (direct) return direct;
+
+  if (Array.isArray(json?.messages)) {
+    const joined = json.messages
+      .map((m: any) => (typeof m?.content === "string" ? m.content.trim() : ""))
+      .filter(Boolean)
+      .join("\n");
+    if (joined) return joined;
+  }
+
+  if (typeof text === "string" && text.includes("data:")) {
+    const chunks: string[] = [];
+    for (const rawLine of text.split("\n")) {
+      const line = rawLine.trim();
+      if (!line.startsWith("data:")) continue;
+
+      const payload = line.slice(5).trim();
+      if (!payload || payload === "[DONE]") continue;
+
+      try {
+        const event = JSON.parse(payload);
+        const chunk = pickFirstString(
+          event?.content,
+          event?.text,
+          event?.delta,
+          event?.choices?.[0]?.delta?.content,
+          event?.choices?.[0]?.message?.content,
+          event?.aiRecord?.aiRecordDetail?.resultText,
+        );
+        if (chunk) chunks.push(chunk);
+      } catch {
+        // Ignore non-JSON SSE lines
+      }
+    }
+
+    if (chunks.length > 0) {
+      return chunks.join("").trim();
+    }
+  }
+
+  if (typeof text === "string" && text.trim().length > 0 && !text.includes("\"error\"")) {
+    return text.trim();
+  }
+
+  return "";
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -91,6 +163,15 @@ serve(async (req) => {
       });
     }
 
+    const uploadExtractedText =
+      typeof uploadParsed.json?.fileContent?.content === "string"
+        ? uploadParsed.json.fileContent.content.trim()
+        : "";
+
+    if (uploadExtractedText.length > 20) {
+      return jsonResponse(200, { text: uploadExtractedText });
+    }
+
     const fileId =
       uploadParsed.json?.fileContent?.uuid ||
       uploadParsed.json?.fileContent?.id ||
@@ -112,11 +193,10 @@ serve(async (req) => {
       "Extract all text from this resume document exactly as written. Preserve section headings, bullet points, and line breaks. Return plain text only.";
 
     const extractionAttempts = [
-      // Preferred: files attachment with UUID
       fileId
         ? {
             type: "UNIFY_CHAT_WITH_AI",
-            model: "gpt-4o-mini",
+            model: "claude-sonnet-4-5-20250929",
             promptObject: {
               prompt: extractPrompt,
               attachments: {
@@ -125,11 +205,10 @@ serve(async (req) => {
             },
           }
         : null,
-      // Fallback: some responses provide only path/key; try it in files too
       filePath
         ? {
             type: "UNIFY_CHAT_WITH_AI",
-            model: "gpt-4o-mini",
+            model: "claude-sonnet-4-5-20250929",
             promptObject: {
               prompt: extractPrompt,
               attachments: {
@@ -138,11 +217,10 @@ serve(async (req) => {
             },
           }
         : null,
-      // For images, also try images attachment
       filePath && isImage
         ? {
             type: "UNIFY_CHAT_WITH_AI",
-            model: "gpt-4o-mini",
+            model: "claude-sonnet-4-5-20250929",
             promptObject: {
               prompt: extractPrompt,
               attachments: {
@@ -164,7 +242,7 @@ serve(async (req) => {
     let lastErrorText = "No extraction attempts were made.";
 
     for (const payload of extractionAttempts) {
-      const extractResponse = await fetch("https://api.1min.ai/api/chat-with-ai", {
+      const extractResponse = await fetch("https://api.1min.ai/api/chat-with-ai?isStreaming=false", {
         method: "POST",
         headers: {
           "API-KEY": ONEMIN_AI_API_KEY,
@@ -182,15 +260,14 @@ serve(async (req) => {
         continue;
       }
 
-      const extractedText =
-        extractParsed.json?.aiRecord?.aiRecordDetail?.resultText ||
-        extractParsed.json?.result ||
-        extractParsed.json?.content ||
-        "";
-
-      if (typeof extractedText === "string" && extractedText.trim().length > 0) {
-        return jsonResponse(200, { text: extractedText.trim() });
+      const extractedText = extractTextFromChatApi(extractParsed);
+      if (extractedText.length > 0) {
+        return jsonResponse(200, { text: extractedText });
       }
+
+      lastErrorStatus = extractResponse.status;
+      lastErrorText = `Empty extraction content. Raw response: ${extractParsed.text.slice(0, 1200)}`;
+      console.error("1min.AI extraction returned empty text:", lastErrorText);
     }
 
     if (lastErrorStatus === 429) {

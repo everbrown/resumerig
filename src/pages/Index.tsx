@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { FileText, Target, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ResumeInput from "@/components/ResumeInput";
 import TranslatorTable from "@/components/TranslatorTable";
@@ -25,8 +26,10 @@ const Index = () => {
     try {
       const data = await analyzeCareerPivot(resume, jobDescription);
       setResult(data);
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err: any) {
+      const msg = err?.message || "Something went wrong. Please try again.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

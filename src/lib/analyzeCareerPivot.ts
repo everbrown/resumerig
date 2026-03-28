@@ -1,7 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AnalysisResult {
-  matchScore: number;
+  beforeScore: number;
+  afterScore: number;
   translatorTable: { oldTerm: string; newTerm: string }[];
   originalBullets: string[];
   tunedBullets: string[];

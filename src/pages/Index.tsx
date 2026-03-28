@@ -260,6 +260,40 @@ const Index = () => {
               <div className="font-body text-foreground leading-relaxed whitespace-pre-wrap">
                 {result.tunedResume}
               </div>
+              <div className="flex gap-3 mt-4 pt-4 border-t border-border">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 font-body"
+                  onClick={() => {
+                    navigator.clipboard.writeText(result.tunedResume);
+                    setCopied(true);
+                    toast.success("Copied to clipboard!");
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 font-body"
+                  onClick={() => {
+                    const blob = new Blob([result.tunedResume], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "tuned-resume.txt";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success("Resume downloaded!");
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  Download .txt
+                </Button>
+              </div>
             </ResultSection>
 
             <ResultSection number="04" title="Your Pivot Pitch" delay={0.3}>

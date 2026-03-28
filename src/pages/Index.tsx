@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut } from "lucide-react";
+import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut, Copy, Download, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -31,6 +31,7 @@ const Index = () => {
   const [outreachResult, setOutreachResult] = useState<OutreachResult | null>(null);
   const [outreachLoading, setOutreachLoading] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [creditStatus, setCreditStatus] = useState<CreditStatus>({
     hasUsedFreeCredit: false,
@@ -259,6 +260,40 @@ const Index = () => {
             <ResultSection number="03" title="Your Tuned Resume" delay={0.25}>
               <div className="font-body text-foreground leading-relaxed whitespace-pre-wrap">
                 {result.tunedResume}
+              </div>
+              <div className="flex gap-3 mt-4 pt-4 border-t border-border">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 font-body"
+                  onClick={() => {
+                    navigator.clipboard.writeText(result.tunedResume);
+                    setCopied(true);
+                    toast.success("Copied to clipboard!");
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  {copied ? "Copied" : "Copy"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 font-body"
+                  onClick={() => {
+                    const blob = new Blob([result.tunedResume], { type: "text/plain" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "tuned-resume.txt";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    toast.success("Resume downloaded!");
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  Download .txt
+                </Button>
               </div>
             </ResultSection>
 

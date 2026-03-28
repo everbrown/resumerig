@@ -18,20 +18,7 @@ Step 3 — De-Niche & Universalize: Strip away hyper-specific industry acronyms 
 
 Step 4 — Tone Alignment: If the JD is from a startup, use "Velocity" and "Scalability." If it's a legacy corporation, use "Governance" and "Risk Mitigation."
 
-You MUST respond with valid JSON in this exact structure:
-{
-  "beforeScore": 42,
-  "afterScore": 88,
-  "translatorTable": [
-    { "oldTerm": "What you called it in old industry", "newTerm": "What this industry calls it" }
-  ],
-  "originalBullets": ["Original bullet point 1 from resume", "Original bullet point 2"],
-  "tunedBullets": ["Rewritten bullet 1 matching original order", "Rewritten bullet 2"],
-  "tunedResume": "The full rewritten resume text with bullet points",
-  "pivotPitch": "A 2-sentence elevator pitch explaining why old experience makes them perfect for the new role"
-}
-
-beforeScore: A number from 1-100 representing how well the ORIGINAL resume matches the target JD before any rewriting. afterScore: A number from 1-100 representing how well the REWRITTEN resume matches the target JD. The improvement should be significant and realistic. The translatorTable should have 5-10 entries. originalBullets and tunedBullets must have the same number of entries, showing a 1:1 mapping of original to rewritten bullets (include 5-8 key bullets). The tunedResume should be comprehensive and fully rewritten. The pivotPitch should be compelling and concise. Return ONLY the JSON, no markdown fences.`;
+IMPORTANT: You MUST respond by calling the provided function tool. Do NOT return plain text.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -48,34 +35,78 @@ serve(async (req) => {
       );
     }
 
-    const ONEMIN_AI_API_KEY = Deno.env.get("ONEMIN_AI_API_KEY");
-    if (!ONEMIN_AI_API_KEY) {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "ONEMIN_AI_API_KEY is not configured" }),
+        JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const userPrompt = `CURRENT RESUME:\n${resume}\n\nTARGET JOB DESCRIPTION:\n${jobDescription}`;
 
-    const response = await fetch("https://api.1min.ai/api/chat-with-ai", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "API-KEY": ONEMIN_AI_API_KEY,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        type: "UNIFY_CHAT_WITH_AI",
-        model: "claude-sonnet-4-5-20250929",
-        promptObject: {
-          prompt: `${SYSTEM_PROMPT}\n\n${userPrompt}`,
-        },
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "return_analysis",
+              description: "Return the career pivot analysis result",
+              parameters: {
+                type: "object",
+                properties: {
+                  beforeScore: { type: "number", description: "Score 1-100 of original resume match" },
+                  afterScore: { type: "number", description: "Score 1-100 of rewritten resume match" },
+                  translatorTable: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        oldTerm: { type: "string" },
+                        newTerm: { type: "string" },
+                      },
+                      required: ["oldTerm", "newTerm"],
+                      additionalProperties: false,
+                    },
+                    description: "5-10 term translations from old to new industry language",
+                  },
+                  originalBullets: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "5-8 original bullet points from resume",
+                  },
+                  tunedBullets: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "Rewritten bullets matching originalBullets 1:1",
+                  },
+                  tunedResume: { type: "string", description: "Full rewritten resume text" },
+                  pivotPitch: { type: "string", description: "2-sentence elevator pitch" },
+                },
+                required: ["beforeScore", "afterScore", "translatorTable", "originalBullets", "tunedBullets", "tunedResume", "pivotPitch"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "return_analysis" } },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("1min.AI error:", response.status, errorText);
+      console.error("AI gateway error:", response.status, errorText);
 
       if (response.status === 429) {
         return new Response(
@@ -85,39 +116,30 @@ serve(async (req) => {
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "Insufficient 1min.AI credits. Please top up your account." }),
+          JSON.stringify({ error: "AI credits exhausted. Please add funds in Settings > Workspace > Usage." }),
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
-        JSON.stringify({ error: `AI service error [${response.status}]: ${errorText}` }),
+        JSON.stringify({ error: `AI service error [${response.status}]` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const data = await response.json();
-    
-    // 1min.AI returns the response in data.aiRecord.aiRecordDetail.resultText
-    const resultText = data?.aiRecord?.aiRecordDetail?.resultText || data?.result || data?.content || "";
-    
-    // Parse the JSON from the AI response
-    let parsed;
-    try {
-      // Try to extract JSON from the response (handle potential markdown fences)
-      const jsonMatch = resultText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("No JSON found in response");
-      }
-    } catch (parseErr) {
-      console.error("Failed to parse AI response:", resultText);
+
+    // Extract structured output from tool call
+    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) {
+      console.error("No tool call in response:", JSON.stringify(data));
       return new Response(
-        JSON.stringify({ error: "Failed to parse AI response. Please try again." }),
+        JSON.stringify({ error: "Failed to get structured response from AI. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const parsed = JSON.parse(toolCall.function.arguments);
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

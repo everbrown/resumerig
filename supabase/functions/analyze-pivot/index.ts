@@ -20,7 +20,8 @@ Step 4 — Tone Alignment: If the JD is from a startup, use "Velocity" and "Scal
 
 You MUST respond with valid JSON in this exact structure:
 {
-  "matchScore": 85,
+  "beforeScore": 42,
+  "afterScore": 88,
   "translatorTable": [
     { "oldTerm": "What you called it in old industry", "newTerm": "What this industry calls it" }
   ],
@@ -30,7 +31,7 @@ You MUST respond with valid JSON in this exact structure:
   "pivotPitch": "A 2-sentence elevator pitch explaining why old experience makes them perfect for the new role"
 }
 
-matchScore: A number from 1-100 representing how well the rewritten resume matches the target JD. The translatorTable should have 5-10 entries. originalBullets and tunedBullets must have the same number of entries, showing a 1:1 mapping of original to rewritten bullets (include 5-8 key bullets). The tunedResume should be comprehensive and fully rewritten. The pivotPitch should be compelling and concise. Return ONLY the JSON, no markdown fences.`;
+beforeScore: A number from 1-100 representing how well the ORIGINAL resume matches the target JD before any rewriting. afterScore: A number from 1-100 representing how well the REWRITTEN resume matches the target JD. The improvement should be significant and realistic. The translatorTable should have 5-10 entries. originalBullets and tunedBullets must have the same number of entries, showing a 1:1 mapping of original to rewritten bullets (include 5-8 key bullets). The tunedResume should be comprehensive and fully rewritten. The pivotPitch should be compelling and concise. Return ONLY the JSON, no markdown fences.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

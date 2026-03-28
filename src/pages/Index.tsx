@@ -26,9 +26,26 @@ const Index = () => {
   const [outreachResult, setOutreachResult] = useState<OutreachResult | null>(null);
   const [outreachLoading, setOutreachLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [creditStatus, setCreditStatus] = useState<CreditStatus>({
+    hasUsedFreeCredit: false,
+    balance: 0,
+    isAuthenticated: false,
+  });
 
-  const canSubmit = resume.trim().length > 20 && jobDescription.trim().length > 20;
-  const showRadar = jobDescription.trim().length > 30 && !result;
+  useEffect(() => {
+    getCreditStatus().then(setCreditStatus);
+    // Check for payment return
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      toast.success("Payment successful! Credits have been added.");
+      getCreditStatus().then(setCreditStatus);
+      window.history.replaceState({}, "", "/");
+    } else if (params.get("payment") === "canceled") {
+      toast.info("Payment was canceled.");
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
 
   const handleAnalyze = async () => {
     setLoading(true);

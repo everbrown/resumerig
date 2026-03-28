@@ -160,12 +160,15 @@ const Index = () => {
               <Sparkles className="h-4 w-4" />
               AI-Powered Resume Translator
             </div>
-            <h1 className="font-display text-4xl font-bold tracking-tight text-primary-foreground sm:text-5xl lg:text-6xl">
-              Career Pivot
+            <h1 className="font-display text-5xl font-bold tracking-tight text-primary-foreground sm:text-6xl lg:text-7xl">
+              Resume<span className="text-secondary">Rig</span>
             </h1>
-            <p className="mt-4 font-body text-lg text-primary-foreground/70 max-w-2xl mx-auto">
-              Translate your professional experience into any industry's language.
-              Your skills are universal — let's prove it.
+            <p className="mt-2 font-mono text-sm uppercase tracking-[0.2em] text-secondary/80">
+              Re-engineer your career
+            </p>
+            <p className="mt-4 font-body text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
+              Mid-career professionals don't need a new resume — they need a <em className="text-primary-foreground not-italic font-medium">translated</em> one.
+              Your 10 years of expertise speaks volumes. Let's make it fluent in your next industry.
             </p>
           </motion.div>
         </div>

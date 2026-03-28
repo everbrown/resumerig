@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 export interface AnalysisResult {
   matchScore: number;
   translatorTable: { oldTerm: string; newTerm: string }[];
+  originalBullets: string[];
+  tunedBullets: string[];
   tunedResume: string;
   pivotPitch: string;
 }

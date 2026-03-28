@@ -37,8 +37,12 @@ const Index = () => {
     isAuthenticated: false,
   });
 
+  // Refresh credits whenever auth state changes (login/logout)
   useEffect(() => {
     getCreditStatus().then(setCreditStatus);
+  }, [user]);
+
+  useEffect(() => {
     // Check for payment return
     const params = new URLSearchParams(window.location.search);
     if (params.get("payment") === "success") {
@@ -95,6 +99,13 @@ const Index = () => {
 
   const handleOutreach = async () => {
     if (!result) return;
+
+    // Check credits before calling the edge function
+    if (creditStatus.balance <= 0) {
+      setShowPaywall(true);
+      return;
+    }
+
     setOutreachLoading(true);
     setOutreachResult(null);
 
@@ -105,6 +116,8 @@ const Index = () => {
         result.pivotPitch
       );
       setOutreachResult(data);
+      // Update balance after successful deduction
+      setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
       toast.success("Outreach messages generated!");
     } catch (err: any) {
       const msg = err?.message || "Outreach generation failed.";

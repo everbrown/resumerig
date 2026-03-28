@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from "react";
-import { Upload, Loader2 } from "lucide-react";
+import { Upload, Loader2, FileUp } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ const ResumeInput = ({
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [extracting, setExtracting] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const adjustHeight = useCallback(() => {
     const el = textareaRef.current;
@@ -40,9 +41,24 @@ const ResumeInput = ({
     adjustHeight();
   }, [value, adjustHeight]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const ACCEPTED_TYPES = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+  ];
+
+  const isAcceptedFile = (file: File) =>
+    ACCEPTED_TYPES.includes(file.type) ||
+    /\.(pdf|docx?|png|jpe?g|webp)$/i.test(file.name);
+
+  const extractFile = async (file: File) => {
+    if (!isAcceptedFile(file)) {
+      toast.error("Unsupported file type. Upload a PDF, Word doc, or image.");
+      return;
+    }
 
     setExtracting(true);
     try {
@@ -61,14 +77,46 @@ const ResumeInput = ({
         toast.success("Resume extracted successfully!");
       }
     } catch (err: any) {
-      const msg = err?.message || "Failed to extract text from file.";
-      toast.error(msg);
+      toast.error(err?.message || "Failed to extract text from file.");
     } finally {
       setExtracting(false);
-      // Reset input so the same file can be re-uploaded
       if (fileRef.current) fileRef.current.value = "";
     }
   };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) extractFile(file);
+  };
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      if (!allowFileUpload) return;
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOver(true);
+    },
+    [allowFileUpload]
+  );
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOver(false);
+      if (!allowFileUpload) return;
+      const file = e.dataTransfer.files?.[0];
+      if (file) extractFile(file);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [allowFileUpload]
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -113,13 +161,30 @@ const ResumeInput = ({
           </>
         )}
       </div>
-      <Textarea
-        ref={textareaRef}
-        placeholder={placeholder}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`min-h-[220px] font-body text-sm leading-relaxed bg-card border-border focus:ring-2 focus:ring-secondary/40 transition-shadow ${autoExpand ? "resize-none overflow-hidden" : "resize-y"}`}
-      />
+
+      <div
+        className="relative"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <Textarea
+          ref={textareaRef}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={`min-h-[220px] font-body text-sm leading-relaxed bg-card border-border focus:ring-2 focus:ring-secondary/40 transition-shadow ${autoExpand ? "resize-none overflow-hidden" : "resize-y"} ${dragOver ? "ring-2 ring-secondary border-secondary" : ""}`}
+        />
+
+        {/* Drag overlay */}
+        {allowFileUpload && dragOver && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center rounded-md border-2 border-dashed border-secondary bg-secondary/10 backdrop-blur-sm pointer-events-none">
+            <FileUp className="h-8 w-8 text-secondary mb-2" />
+            <p className="font-body text-sm font-medium text-secondary">Drop your resume here</p>
+            <p className="font-body text-xs text-muted-foreground">PDF, Word, or image</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

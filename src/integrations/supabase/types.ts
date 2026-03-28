@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           balance: number
           created_at: string
+          has_used_free_credit: boolean
           id: string
           updated_at: string
           user_id: string
@@ -25,6 +26,7 @@ export type Database = {
         Insert: {
           balance?: number
           created_at?: string
+          has_used_free_credit?: boolean
           id?: string
           updated_at?: string
           user_id: string
@@ -32,6 +34,7 @@ export type Database = {
         Update: {
           balance?: number
           created_at?: string
+          has_used_free_credit?: boolean
           id?: string
           updated_at?: string
           user_id?: string

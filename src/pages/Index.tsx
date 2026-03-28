@@ -170,6 +170,27 @@ const Index = () => {
             <ResultSection number="04" title="Your Pivot Pitch" delay={0.3}>
               <PivotPitch pitch={result.pivotPitch} />
             </ResultSection>
+
+            {/* Outreach Section */}
+            <ResultSection number="05" title="LinkedIn Outreach Agent" delay={0.35}>
+              {!outreachResult && !outreachLoading && (
+                <div className="text-center space-y-4">
+                  <p className="font-body text-muted-foreground">
+                    Find decision-makers and generate personalized outreach messages.
+                    <span className="font-mono text-xs ml-2 text-secondary">1 Career Credit</span>
+                  </p>
+                  <Button
+                    onClick={handleOutreach}
+                    className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl shadow-[var(--shadow-elevated)]"
+                  >
+                    <Send className="h-4 w-4" />
+                    Find Decision-Makers
+                  </Button>
+                </div>
+              )}
+              {outreachLoading && <DiscoveryRadar />}
+              {outreachResult && <OutreachPanel result={outreachResult} />}
+            </ResultSection>
           </div>
         )}
       </main>

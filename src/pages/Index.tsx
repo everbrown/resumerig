@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut, Copy, Download, Check } from "lucide-react";
+import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut, Copy, Download, Check, FileDown } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +20,7 @@ import Footer from "@/components/Footer";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
+import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -300,19 +301,33 @@ const Index = () => {
                   size="sm"
                   variant="outline"
                   className="gap-2 font-body"
+                  onClick={async () => {
+                    try {
+                      await downloadAsDocx(result.tunedResume);
+                      toast.success("DOCX downloaded!");
+                    } catch {
+                      toast.error("Failed to generate DOCX");
+                    }
+                  }}
+                >
+                  <FileDown className="h-4 w-4" />
+                  Download .docx
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 font-body"
                   onClick={() => {
-                    const blob = new Blob([result.tunedResume], { type: "text/plain" });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "tuned-resume.txt";
-                    a.click();
-                    URL.revokeObjectURL(url);
-                    toast.success("Resume downloaded!");
+                    try {
+                      downloadAsPdf(result.tunedResume);
+                      toast.success("PDF downloaded!");
+                    } catch {
+                      toast.error("Failed to generate PDF");
+                    }
                   }}
                 >
                   <Download className="h-4 w-4" />
-                  Download .txt
+                  Download .pdf
                 </Button>
               </div>
             </ResultSection>

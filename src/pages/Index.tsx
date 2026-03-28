@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Target, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { FileText, Target, ArrowRight, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ResumeInput from "@/components/ResumeInput";
@@ -8,6 +8,9 @@ import TranslatorTable from "@/components/TranslatorTable";
 import ResultSection from "@/components/ResultSection";
 import PivotPitch from "@/components/PivotPitch";
 import MatchScore from "@/components/MatchScore";
+import JargonRadar from "@/components/JargonRadar";
+import ComparisonSlider from "@/components/ComparisonSlider";
+import DraftingState from "@/components/DraftingState";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 
 const Index = () => {
@@ -18,6 +21,7 @@ const Index = () => {
   const [error, setError] = useState("");
 
   const canSubmit = resume.trim().length > 20 && jobDescription.trim().length > 20;
+  const showRadar = jobDescription.trim().length > 30 && !result;
 
   const handleAnalyze = async () => {
     setLoading(true);
@@ -91,6 +95,9 @@ const Index = () => {
           />
         </motion.div>
 
+        {/* Jargon Radar */}
+        {showRadar && <JargonRadar jobDescription={jobDescription} />}
+
         <div className="flex justify-center">
           <Button
             onClick={handleAnalyze}
@@ -98,19 +105,13 @@ const Index = () => {
             size="lg"
             className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg disabled:opacity-50"
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Analyzing Your Pivot...
-              </>
-            ) : (
-              <>
-                Re-Engineer My Resume
-                <ArrowRight className="h-5 w-5" />
-              </>
-            )}
+            Re-Engineer My Resume
+            <ArrowRight className="h-5 w-5" />
           </Button>
         </div>
+
+        {/* Drafting State */}
+        {loading && <DraftingState />}
 
         {error && (
           <p className="text-center text-destructive font-body">{error}</p>
@@ -125,13 +126,20 @@ const Index = () => {
               <TranslatorTable entries={result.translatorTable} />
             </ResultSection>
 
-            <ResultSection number="02" title="Your Tuned Resume" delay={0.2}>
+            <ResultSection number="02" title="Before → After Comparison" delay={0.2}>
+              <ComparisonSlider
+                originalBullets={result.originalBullets || []}
+                tunedBullets={result.tunedBullets || []}
+              />
+            </ResultSection>
+
+            <ResultSection number="03" title="Your Tuned Resume" delay={0.25}>
               <div className="font-body text-foreground leading-relaxed whitespace-pre-wrap">
                 {result.tunedResume}
               </div>
             </ResultSection>
 
-            <ResultSection number="03" title="Your Pivot Pitch" delay={0.3}>
+            <ResultSection number="04" title="Your Pivot Pitch" delay={0.3}>
               <PivotPitch pitch={result.pivotPitch} />
             </ResultSection>
           </div>

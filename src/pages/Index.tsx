@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Target, ArrowRight, Sparkles } from "lucide-react";
+import { FileText, Target, ArrowRight, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ResumeInput from "@/components/ResumeInput";
@@ -11,13 +11,18 @@ import MatchScore from "@/components/MatchScore";
 import JargonRadar from "@/components/JargonRadar";
 import ComparisonSlider from "@/components/ComparisonSlider";
 import DraftingState from "@/components/DraftingState";
+import DiscoveryRadar from "@/components/DiscoveryRadar";
+import OutreachPanel from "@/components/OutreachPanel";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
+import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 
 const Index = () => {
   const [resume, setResume] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [outreachResult, setOutreachResult] = useState<OutreachResult | null>(null);
+  const [outreachLoading, setOutreachLoading] = useState(false);
   const [error, setError] = useState("");
 
   const canSubmit = resume.trim().length > 20 && jobDescription.trim().length > 20;
@@ -37,6 +42,27 @@ const Index = () => {
       toast.error(msg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOutreach = async () => {
+    if (!result) return;
+    setOutreachLoading(true);
+    setOutreachResult(null);
+
+    try {
+      const data = await generateOutreach(
+        result.tunedResume,
+        jobDescription,
+        result.pivotPitch
+      );
+      setOutreachResult(data);
+      toast.success("Outreach messages generated!");
+    } catch (err: any) {
+      const msg = err?.message || "Outreach generation failed.";
+      toast.error(msg);
+    } finally {
+      setOutreachLoading(false);
     }
   };
 
@@ -143,6 +169,27 @@ const Index = () => {
 
             <ResultSection number="04" title="Your Pivot Pitch" delay={0.3}>
               <PivotPitch pitch={result.pivotPitch} />
+            </ResultSection>
+
+            {/* Outreach Section */}
+            <ResultSection number="05" title="LinkedIn Outreach Agent" delay={0.35}>
+              {!outreachResult && !outreachLoading && (
+                <div className="text-center space-y-4">
+                  <p className="font-body text-muted-foreground">
+                    Find decision-makers and generate personalized outreach messages.
+                    <span className="font-mono text-xs ml-2 text-secondary">1 Career Credit</span>
+                  </p>
+                  <Button
+                    onClick={handleOutreach}
+                    className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl shadow-[var(--shadow-elevated)]"
+                  >
+                    <Send className="h-4 w-4" />
+                    Find Decision-Makers
+                  </Button>
+                </div>
+              )}
+              {outreachLoading && <DiscoveryRadar />}
+              {outreachResult && <OutreachPanel result={outreachResult} />}
             </ResultSection>
           </div>
         )}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Target, ArrowRight, Sparkles } from "lucide-react";
+import { FileText, Target, ArrowRight, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ResumeInput from "@/components/ResumeInput";
@@ -11,7 +11,10 @@ import MatchScore from "@/components/MatchScore";
 import JargonRadar from "@/components/JargonRadar";
 import ComparisonSlider from "@/components/ComparisonSlider";
 import DraftingState from "@/components/DraftingState";
+import DiscoveryRadar from "@/components/DiscoveryRadar";
+import OutreachPanel from "@/components/OutreachPanel";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
+import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 
 const Index = () => {
   const [resume, setResume] = useState("");

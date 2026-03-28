@@ -55,32 +55,13 @@ serve(async (req) => {
       );
     }
 
-    // Check credits via auth
+    // Auth validation (credits managed client-side)
     const authHeader = req.headers.get("authorization");
-    if (authHeader) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
-      const token = authHeader.replace("Bearer ", "");
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-      if (user) {
-        const { data: creditResult, error: creditError } = await supabase.rpc("deduct_credit", {
-          p_user_id: user.id,
-        });
-
-        if (creditError) {
-          console.error("Credit deduction error:", creditError);
-        }
-
-        if (creditResult === -1) {
-          return new Response(
-            JSON.stringify({ error: "Insufficient Career Credits. You need at least 1 credit for outreach generation." }),
-            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      }
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Authentication required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const ONEMIN_AI_API_KEY = Deno.env.get("ONEMIN_AI_API_KEY");

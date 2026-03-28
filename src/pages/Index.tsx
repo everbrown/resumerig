@@ -134,7 +134,9 @@ const Index = () => {
       <header className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         {/* Auth bar */}
         <div className="relative z-10 flex justify-end px-6 pt-4">
-          {user ? (
+          {authLoading ? (
+            <div className="h-6" /> 
+          ) : user ? (
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-primary-foreground/60">{user.email}</span>
               {creditStatus.balance > 0 && (

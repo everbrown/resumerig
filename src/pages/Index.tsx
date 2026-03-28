@@ -45,7 +45,7 @@ const Index = () => {
       {/* Hero */}
       <header className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(40 20% 97%) 1px, transparent 0)',
+          backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(160 10% 97%) 1px, transparent 0)',
           backgroundSize: '32px 32px'
         }} />
         <div className="relative mx-auto max-w-4xl px-6 py-20 text-center">

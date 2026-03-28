@@ -49,10 +49,14 @@ serve(async (req) => {
       );
     }
 
+    // Read file into buffer and reconstruct as a proper Blob for the outgoing request
+    const fileBuffer = await file.arrayBuffer();
+    const fileBlob = new Blob([fileBuffer], { type: file.type || "application/octet-stream" });
+
     // Build multipart form for 1min.AI
     const aiForm = new FormData();
     aiForm.append("type", "EXTRACT_TEXT_FROM_FILE");
-    aiForm.append("file", file, file.name);
+    aiForm.append("file", fileBlob, file.name || "resume.pdf");
 
     const response = await fetch("https://api.1min.ai/api/features", {
       method: "POST",

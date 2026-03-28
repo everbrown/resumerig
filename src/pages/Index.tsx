@@ -6,12 +6,7 @@ import ResumeInput from "@/components/ResumeInput";
 import TranslatorTable from "@/components/TranslatorTable";
 import ResultSection from "@/components/ResultSection";
 import PivotPitch from "@/components/PivotPitch";
-
-interface AnalysisResult {
-  translatorTable: { oldTerm: string; newTerm: string }[];
-  tunedResume: string;
-  pivotPitch: string;
-}
+import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 
 const Index = () => {
   const [resume, setResume] = useState("");
@@ -28,14 +23,7 @@ const Index = () => {
     setResult(null);
 
     try {
-      const response = await fetch("/api/analyze-pivot", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume, jobDescription }),
-      });
-
-      if (!response.ok) throw new Error("Analysis failed");
-      const data = await response.json();
+      const data = await analyzeCareerPivot(resume, jobDescription);
       setResult(data);
     } catch {
       setError("Something went wrong. Please try again.");

@@ -186,7 +186,7 @@ export async function downloadAsDocx(resumeText: string): Promise<void> {
   });
 
   const blob = await Packer.toBlob(doc);
-  saveAs(blob, "tuned-resume.docx");
+  saveAs(blob, "refined-resume.docx");
 }
 
 export function downloadAsPdf(resumeText: string): void {
@@ -268,5 +268,5 @@ export function downloadAsPdf(resumeText: string): void {
     }
   }
 
-  pdf.save("tuned-resume.pdf");
+  pdf.save("refined-resume.pdf");
 }

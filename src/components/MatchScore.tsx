@@ -82,7 +82,7 @@ const MatchScore = ({ beforeScore, afterScore }: MatchScoreProps) => {
           >
             {animatedAfter}%
           </motion.span>
-          <span className="font-body text-xs text-muted-foreground">Tuned Match</span>
+          <span className="font-body text-xs text-muted-foreground">Refined Match</span>
         </div>
       </div>
 

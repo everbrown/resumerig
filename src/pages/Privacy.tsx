@@ -71,7 +71,7 @@ const Privacy = () => {
             <h2 className="font-display text-lg font-semibold text-foreground">3. How We Use Your Information</h2>
             <p>We use collected information for the following purposes, each supported by a lawful basis:</p>
             <ul className="list-disc pl-6 space-y-1">
-              <li><strong>Service Delivery (Contract Performance):</strong> To analyze your résumé against a job description, generate tuned résumé content, identify decision-makers, and draft outreach messages.</li>
+              <li><strong>Service Delivery (Contract Performance):</strong> To analyze your résumé against a job description, generate refined résumé content, identify decision-makers, and draft outreach messages.</li>
               <li><strong>Account Management (Contract Performance):</strong> To create and maintain your account, authenticate your identity, and manage your credit balance.</li>
               <li><strong>Payment Processing (Contract Performance):</strong> To process credit purchases and manage billing through Stripe.</li>
               <li><strong>Service Improvement (Legitimate Interest):</strong> To diagnose technical issues, analyze aggregate usage patterns, and improve functionality. We do not use your résumé content to train machine-learning models.</li>

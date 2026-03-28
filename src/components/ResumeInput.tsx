@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Upload, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,6 +12,7 @@ interface ResumeInputProps {
   onChange: (val: string) => void;
   icon: React.ReactNode;
   allowFileUpload?: boolean;
+  autoExpand?: boolean;
 }
 
 const ResumeInput = ({
@@ -22,9 +23,22 @@ const ResumeInput = ({
   onChange,
   icon,
   allowFileUpload = false,
+  autoExpand = false,
 }: ResumeInputProps) => {
   const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [extracting, setExtracting] = useState(false);
+
+  const adjustHeight = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el || !autoExpand) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.max(el.scrollHeight, 220)}px`;
+  }, [autoExpand]);
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value, adjustHeight]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,10 +114,11 @@ const ResumeInput = ({
         )}
       </div>
       <Textarea
+        ref={textareaRef}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="min-h-[220px] resize-y font-body text-sm leading-relaxed bg-card border-border focus:ring-2 focus:ring-secondary/40 transition-shadow"
+        className={`min-h-[220px] font-body text-sm leading-relaxed bg-card border-border focus:ring-2 focus:ring-secondary/40 transition-shadow ${autoExpand ? "resize-none overflow-hidden" : "resize-y"}`}
       />
     </div>
   );

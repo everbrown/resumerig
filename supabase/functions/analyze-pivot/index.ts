@@ -24,11 +24,13 @@ You MUST respond with valid JSON in this exact structure:
   "translatorTable": [
     { "oldTerm": "What you called it in old industry", "newTerm": "What this industry calls it" }
   ],
+  "originalBullets": ["Original bullet point 1 from resume", "Original bullet point 2"],
+  "tunedBullets": ["Rewritten bullet 1 matching original order", "Rewritten bullet 2"],
   "tunedResume": "The full rewritten resume text with bullet points",
   "pivotPitch": "A 2-sentence elevator pitch explaining why old experience makes them perfect for the new role"
 }
 
-matchScore: A number from 1-100 representing how well the rewritten resume matches the target JD. The translatorTable should have 5-10 entries. The tunedResume should be comprehensive and fully rewritten. The pivotPitch should be compelling and concise. Return ONLY the JSON, no markdown fences.`;
+matchScore: A number from 1-100 representing how well the rewritten resume matches the target JD. The translatorTable should have 5-10 entries. originalBullets and tunedBullets must have the same number of entries, showing a 1:1 mapping of original to rewritten bullets (include 5-8 key bullets). The tunedResume should be comprehensive and fully rewritten. The pivotPitch should be compelling and concise. Return ONLY the JSON, no markdown fences.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {

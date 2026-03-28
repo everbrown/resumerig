@@ -168,7 +168,7 @@ const Index = () => {
             </p>
             <p className="mt-4 font-body text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
               Stop sending the same generic resume everywhere. ResumeRig <em className="text-primary-foreground not-italic font-medium">re-engineers</em> your
-              experience to speak the exact language of every job you target.
+              experience to speak the exact language of every job you target — then finds the hiring manager on LinkedIn and drafts your pitch.
             </p>
           </motion.div>
         </div>

@@ -193,8 +193,8 @@ const Index = () => {
               Your unfair advantage
             </p>
             <p className="mt-4 font-body text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
-              Stop sending the same generic resume everywhere. ResumeRig <em className="text-primary-foreground not-italic font-medium">re-engineers</em> your
-              experience to speak the exact language of every job you target — then drafts personalized outreach messages for hiring managers, recruiters, and industry peers.
+               Stop sending the same generic resume everywhere. ResumeRig <em className="text-primary-foreground not-italic font-medium">re-engineers</em> your
+               experience by identifying the target domain and translating your skills into its language — bridging industry gaps so your resume speaks directly to every role you pursue.
             </p>
           </motion.div>
         </div>

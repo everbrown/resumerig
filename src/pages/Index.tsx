@@ -233,6 +233,8 @@ const Index = () => {
           </div>
         )}
       </main>
+
+      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} />
     </div>
   );
 };

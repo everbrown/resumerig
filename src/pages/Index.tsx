@@ -7,6 +7,7 @@ import ResumeInput from "@/components/ResumeInput";
 import TranslatorTable from "@/components/TranslatorTable";
 import ResultSection from "@/components/ResultSection";
 import PivotPitch from "@/components/PivotPitch";
+import MatchScore from "@/components/MatchScore";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 
 const Index = () => {

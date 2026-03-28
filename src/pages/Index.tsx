@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FileText, Target, ArrowRight, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -13,8 +13,10 @@ import ComparisonSlider from "@/components/ComparisonSlider";
 import DraftingState from "@/components/DraftingState";
 import DiscoveryRadar from "@/components/DiscoveryRadar";
 import OutreachPanel from "@/components/OutreachPanel";
+import PaywallModal from "@/components/PaywallModal";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
+import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
 
 const Index = () => {
   const [resume, setResume] = useState("");

@@ -12,96 +12,15 @@ const jsonResponse = (status: number, body: Record<string, unknown>) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const parseJsonOrText = async (response: Response) => {
-  const text = await response.text();
-  try {
-    return { text, json: JSON.parse(text) };
-  } catch {
-    return { text, json: null };
-  }
-};
-
-const pickFirstString = (...values: unknown[]): string => {
-  for (const value of values) {
-    if (typeof value === "string" && value.trim().length > 0) {
-      return value.trim();
-    }
-  }
-  return "";
-};
-
-const extractTextFromChatApi = (parsed: { text: string; json: any }): string => {
-  const { json, text } = parsed;
-
-  const direct = pickFirstString(
-    json?.aiRecord?.aiRecordDetail?.resultText,
-    json?.result,
-    json?.content,
-    json?.output_text,
-    json?.message,
-    json?.data?.text,
-    json?.response?.text,
-    json?.response?.output_text,
-    json?.choices?.[0]?.message?.content,
-    json?.choices?.[0]?.delta?.content,
-  );
-
-  if (direct) return direct;
-
-  if (Array.isArray(json?.messages)) {
-    const joined = json.messages
-      .map((m: any) => (typeof m?.content === "string" ? m.content.trim() : ""))
-      .filter(Boolean)
-      .join("\n");
-    if (joined) return joined;
-  }
-
-  if (typeof text === "string" && text.includes("data:")) {
-    const chunks: string[] = [];
-    for (const rawLine of text.split("\n")) {
-      const line = rawLine.trim();
-      if (!line.startsWith("data:")) continue;
-
-      const payload = line.slice(5).trim();
-      if (!payload || payload === "[DONE]") continue;
-
-      try {
-        const event = JSON.parse(payload);
-        const chunk = pickFirstString(
-          event?.content,
-          event?.text,
-          event?.delta,
-          event?.choices?.[0]?.delta?.content,
-          event?.choices?.[0]?.message?.content,
-          event?.aiRecord?.aiRecordDetail?.resultText,
-        );
-        if (chunk) chunks.push(chunk);
-      } catch {
-        // Ignore non-JSON SSE lines
-      }
-    }
-
-    if (chunks.length > 0) {
-      return chunks.join("").trim();
-    }
-  }
-
-  if (typeof text === "string" && text.trim().length > 0 && !text.includes("\"error\"")) {
-    return text.trim();
-  }
-
-  return "";
-};
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const ONEMIN_AI_API_KEY = Deno.env.get("ONEMIN_AI_API_KEY");
-    if (!ONEMIN_AI_API_KEY) {
-      return jsonResponse(500, { error: "ONEMIN_AI_API_KEY is not configured" });
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return jsonResponse(500, { error: "LOVABLE_API_KEY is not configured" });
     }
 
     const contentType = req.headers.get("content-type") || "";
@@ -116,7 +35,7 @@ serve(async (req) => {
       return jsonResponse(400, { error: "No file provided" });
     }
 
-    const maxSize = 20 * 1024 * 1024; // 20MB
+    const maxSize = 20 * 1024 * 1024;
     if (file.size > maxSize) {
       return jsonResponse(400, { error: "File too large. Maximum size is 20MB." });
     }
@@ -134,160 +53,76 @@ serve(async (req) => {
       });
     }
 
-    // Step 1: Upload file to 1min Asset API
+    // Convert file to base64
     const fileBuffer = await file.arrayBuffer();
-    const uploadForm = new FormData();
-    uploadForm.append("asset", new Blob([fileBuffer], { type: file.type || "application/octet-stream" }), file.name || "resume.pdf");
+    const base64 = btoa(
+      new Uint8Array(fileBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
+    );
 
-    const uploadResponse = await fetch("https://api.1min.ai/api/assets", {
-      method: "POST",
-      headers: {
-        "API-KEY": ONEMIN_AI_API_KEY,
-      },
-      body: uploadForm,
-    });
+    // Determine MIME type
+    let mimeType = file.type || "application/octet-stream";
+    if (isPdf && !mimeType.includes("pdf")) mimeType = "application/pdf";
+    if (isDoc && !mimeType.includes("word")) mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-    const uploadParsed = await parseJsonOrText(uploadResponse);
-    if (!uploadResponse.ok) {
-      console.error("1min.AI asset upload error:", uploadResponse.status, uploadParsed.text);
-
-      if (uploadResponse.status === 429) {
-        return jsonResponse(429, { error: "Rate limit exceeded. Please try again in a moment." });
-      }
-      if (uploadResponse.status === 402) {
-        return jsonResponse(402, { error: "Insufficient 1min.AI credits." });
-      }
-
-      return jsonResponse(500, {
-        error: `File extraction failed [${uploadResponse.status}]`,
-      });
-    }
-
-    const uploadExtractedText =
-      typeof uploadParsed.json?.fileContent?.content === "string"
-        ? uploadParsed.json.fileContent.content.trim()
-        : "";
-
-    if (uploadExtractedText.length > 20) {
-      return jsonResponse(200, { text: uploadExtractedText });
-    }
-
-    const fileId =
-      uploadParsed.json?.fileContent?.uuid ||
-      uploadParsed.json?.fileContent?.id ||
-      uploadParsed.json?.asset?.uuid ||
-      uploadParsed.json?.asset?.id;
-
-    const filePath =
-      uploadParsed.json?.fileContent?.path ||
-      uploadParsed.json?.asset?.key ||
-      uploadParsed.json?.asset?.path;
-
-    if (!fileId && !filePath) {
-      console.error("1min.AI upload response missing file identifier:", uploadParsed.text);
-      return jsonResponse(500, { error: "File upload succeeded but no file identifier was returned." });
-    }
-
-    // Step 2: Ask Chat API to OCR/extract text from uploaded file
     const extractPrompt =
       "Extract all resume text exactly as written. Preserve original company names, university/school names, degree names, dates, headings, bullet points, and line breaks. Do NOT paraphrase, normalize, spell-correct, or expand abbreviations. Return plain text only.";
 
-    const extractionAttempts = [
-      fileId
-        ? {
-            type: "UNIFY_CHAT_WITH_AI",
-            model: "claude-sonnet-4-5-20250929",
-            promptObject: {
-              prompt: extractPrompt,
-              attachments: {
-                files: [fileId],
-              },
-            },
-          }
-        : null,
-      filePath
-        ? {
-            type: "UNIFY_CHAT_WITH_AI",
-            model: "claude-sonnet-4-5-20250929",
-            promptObject: {
-              prompt: extractPrompt,
-              attachments: {
-                files: [filePath],
-              },
-            },
-          }
-        : null,
-      filePath && isImage
-        ? {
-            type: "UNIFY_CHAT_WITH_AI",
-            model: "claude-sonnet-4-5-20250929",
-            promptObject: {
-              prompt: extractPrompt,
-              attachments: {
-                images: [filePath],
-              },
-            },
-          }
-        : null,
-    ].filter(Boolean) as Array<Record<string, unknown>>;
-
-    console.log("extract-resume upload refs", {
-      fileId: fileId || null,
-      filePath: filePath || null,
-      attempts: extractionAttempts.length,
-      isImage,
-    });
-
-    let lastErrorStatus = 500;
-    let lastErrorText = "No extraction attempts were made.";
-
-    for (const payload of extractionAttempts) {
-      const extractResponse = await fetch("https://api.1min.ai/api/chat-with-ai?isStreaming=false", {
-        method: "POST",
-        headers: {
-          "API-KEY": ONEMIN_AI_API_KEY,
-          "Content-Type": "application/json",
+    // Build multimodal message with base64 file
+    const userContent: any[] = [
+      {
+        type: "image_url",
+        image_url: {
+          url: `data:${mimeType};base64,${base64}`,
         },
-        body: JSON.stringify(payload),
-      });
+      },
+      {
+        type: "text",
+        text: extractPrompt,
+      },
+    ];
 
-      const extractParsed = await parseJsonOrText(extractResponse);
-
-      // Detect soft failures: API returns 200 but body indicates an error
-      const softFailure =
-        extractParsed.json?.aiRecord?.metadata?.status === "FAILURE" ||
-        extractParsed.json?.resultObject?.code === "INSUFFICIENT_CREDITS" ||
-        extractParsed.json?.status === "FAILURE" ||
-        extractParsed.json?.error;
-
-      if (!extractResponse.ok || softFailure) {
-        lastErrorStatus = extractResponse.status;
-        lastErrorText = extractParsed.text;
-        console.error("1min.AI extraction error:", extractResponse.status, extractParsed.text);
-        continue;
-      }
-
-      const extractedText = extractTextFromChatApi(extractParsed);
-      if (extractedText.length > 0) {
-        return jsonResponse(200, { text: extractedText });
-      }
-
-      lastErrorStatus = extractResponse.status;
-      lastErrorText = `Empty extraction content. Raw response: ${extractParsed.text.slice(0, 1200)}`;
-      console.error("1min.AI extraction returned empty text:", lastErrorText);
-    }
-
-    if (lastErrorStatus === 429) {
-      return jsonResponse(429, { error: "Rate limit exceeded. Please try again in a moment." });
-    }
-    if (lastErrorStatus === 402) {
-      return jsonResponse(402, { error: "Insufficient 1min.AI credits." });
-    }
-
-    console.error("1min.AI extraction failed after attempts:", lastErrorText);
-    return jsonResponse(422, {
-      error: "Could not extract text from the file. Try a different file or paste your resume instead.",
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "user",
+            content: userContent,
+          },
+        ],
+      }),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI gateway error:", response.status, errorText);
+
+      if (response.status === 429) {
+        return jsonResponse(429, { error: "Rate limit exceeded. Please try again in a moment." });
+      }
+      if (response.status === 402) {
+        return jsonResponse(402, { error: "AI credits exhausted. Please add funds in Settings > Workspace > Usage." });
+      }
+
+      return jsonResponse(500, { error: `File extraction failed [${response.status}]` });
+    }
+
+    const data = await response.json();
+    const extractedText = data?.choices?.[0]?.message?.content;
+
+    if (!extractedText || typeof extractedText !== "string" || extractedText.trim().length < 10) {
+      console.error("Empty extraction result:", JSON.stringify(data));
+      return jsonResponse(422, {
+        error: "Could not extract text from the file. Try a different file or paste your resume instead.",
+      });
+    }
+
+    return jsonResponse(200, { text: extractedText.trim() });
   } catch (e) {
     console.error("extract-resume error:", e);
     return jsonResponse(500, { error: e instanceof Error ? e.message : "Unknown error" });

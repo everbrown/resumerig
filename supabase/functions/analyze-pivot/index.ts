@@ -18,6 +18,10 @@ Step 3 — De-Niche & Universalize: Strip away hyper-specific industry acronyms 
 
 Step 4 — Tone Alignment: If the JD is from a startup, use "Velocity" and "Scalability." If it's a legacy corporation, use "Governance" and "Risk Mitigation."
 
+CRITICAL RULES:
+- NEVER change employer/company names, school names, dates of employment, or personal details (name, contact info). Only rewrite bullet points, skills, and summary sections.
+- The tunedResume must keep every original workplace, institution, job title, and date exactly as they appear in the source resume.
+
 IMPORTANT: You MUST respond by calling the provided function tool. Do NOT return plain text.`;
 
 serve(async (req) => {

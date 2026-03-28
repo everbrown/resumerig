@@ -106,8 +106,9 @@ const Index = () => {
   const handleOutreach = async () => {
     if (!result) return;
 
-    // Check credits before calling the edge function
-    if (creditStatus.balance <= 0) {
+    // First outreach is free (same session as first tune); otherwise require credits
+    const isFirstFreeOutreach = creditStatus.hasUsedFreeCredit && !outreachResult && creditStatus.balance <= 0 && !sessionStorage.getItem("rr_outreach_used");
+    if (!isFirstFreeOutreach && creditStatus.balance <= 0) {
       setShowPaywall(true);
       return;
     }
@@ -122,8 +123,11 @@ const Index = () => {
         result.pivotPitch
       );
       setOutreachResult(data);
-      // Update balance after successful deduction
-      setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
+      sessionStorage.setItem("rr_outreach_used", "1");
+      // Only deduct balance if they had credits to spend
+      if (creditStatus.balance > 0) {
+        setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
+      }
       toast.success("Outreach messages generated!");
     } catch (err: any) {
       const msg = err?.message || "Outreach generation failed.";

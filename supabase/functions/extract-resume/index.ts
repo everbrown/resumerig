@@ -253,7 +253,14 @@ serve(async (req) => {
 
       const extractParsed = await parseJsonOrText(extractResponse);
 
-      if (!extractResponse.ok) {
+      // Detect soft failures: API returns 200 but body indicates an error
+      const softFailure =
+        extractParsed.json?.aiRecord?.metadata?.status === "FAILURE" ||
+        extractParsed.json?.resultObject?.code === "INSUFFICIENT_CREDITS" ||
+        extractParsed.json?.status === "FAILURE" ||
+        extractParsed.json?.error;
+
+      if (!extractResponse.ok || softFailure) {
         lastErrorStatus = extractResponse.status;
         lastErrorText = extractParsed.text;
         console.error("1min.AI extraction error:", extractResponse.status, extractParsed.text);

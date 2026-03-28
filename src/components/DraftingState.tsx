@@ -38,7 +38,7 @@ const DraftingState = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
-            className="font-body text-sm text-muted-foreground text-center"
+            className="font-mono text-sm text-muted-foreground text-center"
           >
             {DRAFTING_MESSAGES[index]}
           </motion.p>

@@ -190,7 +190,7 @@ serve(async (req) => {
 
     // Step 2: Ask Chat API to OCR/extract text from uploaded file
     const extractPrompt =
-      "Extract all text from this resume document exactly as written. Preserve section headings, bullet points, and line breaks. Return plain text only.";
+      "Extract all resume text exactly as written. Preserve original company names, university/school names, degree names, dates, headings, bullet points, and line breaks. Do NOT paraphrase, normalize, spell-correct, or expand abbreviations. Return plain text only.";
 
     const extractionAttempts = [
       fileId

@@ -26,6 +26,139 @@ CRITICAL RULES:
 
 IMPORTANT: You MUST respond by calling the provided function tool. Do NOT return plain text.`;
 
+const normalizeForMatch = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/[^a-z0-9|\-\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const isBulletLine = (line: string) => /^\s*(?:[-*•▪●]|\d+[.)])\s+/.test(line);
+
+const normalizeHeading = (line: string) => line.trim().toUpperCase().replace(/[:\s]+$/g, "");
+
+const isExperienceHeading = (line: string) => {
+  const h = normalizeHeading(line);
+  return ["EXPERIENCE", "PROFESSIONAL EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT HISTORY", "RELEVANT EXPERIENCE"].includes(h);
+};
+
+const isEducationHeading = (line: string) => {
+  const h = normalizeHeading(line);
+  return ["EDUCATION", "ACADEMIC BACKGROUND", "EDUCATIONAL BACKGROUND", "ACADEMICS"].includes(h);
+};
+
+type IdentityLine = { index: number; text: string };
+
+const collectIdentityLines = (text: string) => {
+  const lines = text.split("\n");
+  const header: IdentityLine[] = [];
+  const experience: IdentityLine[] = [];
+  const education: IdentityLine[] = [];
+
+  let section: "header" | "experience" | "education" | "other" = "header";
+  let seenMainSection = false;
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    if (isExperienceHeading(trimmed)) {
+      section = "experience";
+      seenMainSection = true;
+      return;
+    }
+
+    if (isEducationHeading(trimmed)) {
+      section = "education";
+      seenMainSection = true;
+      return;
+    }
+
+    if (/^[A-Z][A-Z\s/&-]{2,}$/.test(trimmed) && trimmed.length <= 45) {
+      section = "other";
+      seenMainSection = true;
+      return;
+    }
+
+    if (isBulletLine(trimmed)) return;
+
+    if (!seenMainSection && section === "header") {
+      header.push({ index, text: line });
+      return;
+    }
+
+    if (section === "experience") {
+      experience.push({ index, text: line });
+      return;
+    }
+
+    if (section === "education") {
+      education.push({ index, text: line });
+    }
+  });
+
+  return { lines, header, experience, education };
+};
+
+const extractTitleFromExperienceLine = (line: string) => {
+  const trimmed = line.trim();
+  if (!trimmed) return "";
+  if (trimmed.includes("|")) {
+    return trimmed.split("|")[0].trim();
+  }
+  return trimmed.length <= 90 ? trimmed : "";
+};
+
+const lockImmutableIdentityLines = (sourceResume: string, generatedResume: string) => {
+  const source = collectIdentityLines(sourceResume);
+  const generated = collectIdentityLines(generatedResume);
+  const generatedLines = [...generated.lines];
+
+  const applyGroup = (sourceGroup: IdentityLine[], generatedGroup: IdentityLine[]) => {
+    const limit = Math.min(sourceGroup.length, generatedGroup.length);
+    for (let i = 0; i < limit; i++) {
+      if (normalizeForMatch(sourceGroup[i].text) !== normalizeForMatch(generatedGroup[i].text)) {
+        generatedLines[generatedGroup[i].index] = sourceGroup[i].text;
+      }
+    }
+  };
+
+  applyGroup(source.header, generated.header);
+  applyGroup(source.experience, generated.experience);
+  applyGroup(source.education, generated.education);
+
+  const sourceTitles = source.experience
+    .map((item) => extractTitleFromExperienceLine(item.text))
+    .filter(Boolean);
+
+  return {
+    tunedResume: generatedLines.join("\n"),
+    sourceTitles,
+  };
+};
+
+const sanitizeTitleChanges = (titleChanges: unknown, sourceTitles: string[]) => {
+  if (!Array.isArray(titleChanges)) return [];
+
+  return titleChanges
+    .map((item, index) => {
+      if (!item || typeof item !== "object") return null;
+      const originalRaw = typeof (item as any).originalTitle === "string" ? (item as any).originalTitle.trim() : "";
+      const suggested = typeof (item as any).suggestedTitle === "string" ? (item as any).suggestedTitle.trim() : "";
+      const original = sourceTitles[index] || originalRaw;
+
+      if (!original || !suggested) return null;
+      if (normalizeForMatch(original) === normalizeForMatch(suggested)) return null;
+
+      return {
+        originalTitle: original,
+        suggestedTitle: suggested,
+      };
+    })
+    .filter(Boolean);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -159,6 +292,12 @@ serve(async (req) => {
     }
 
     const parsed = JSON.parse(toolCall.function.arguments);
+
+    if (typeof parsed?.tunedResume === "string") {
+      const { tunedResume, sourceTitles } = lockImmutableIdentityLines(resume, parsed.tunedResume);
+      parsed.tunedResume = tunedResume;
+      parsed.titleChanges = sanitizeTitleChanges(parsed.titleChanges, sourceTitles);
+    }
 
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

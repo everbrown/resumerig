@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut } from "lucide-react";
+import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut, Copy, Download, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";

@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface TitleChange {
+  originalTitle: string;
+  suggestedTitle: string;
+}
+
 export interface AnalysisResult {
   beforeScore: number;
   afterScore: number;
@@ -8,6 +13,7 @@ export interface AnalysisResult {
   tunedBullets: string[];
   tunedResume: string;
   pivotPitch: string;
+  titleChanges?: TitleChange[];
 }
 
 export async function analyzeCareerPivot(

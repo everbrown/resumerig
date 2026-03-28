@@ -91,8 +91,16 @@ serve(async (req) => {
       });
     }
 
-    const fileId = uploadParsed.json?.fileContent?.uuid;
-    const filePath = uploadParsed.json?.fileContent?.path || uploadParsed.json?.asset?.key;
+    const fileId =
+      uploadParsed.json?.fileContent?.uuid ||
+      uploadParsed.json?.fileContent?.id ||
+      uploadParsed.json?.asset?.uuid ||
+      uploadParsed.json?.asset?.id;
+
+    const filePath =
+      uploadParsed.json?.fileContent?.path ||
+      uploadParsed.json?.asset?.key ||
+      uploadParsed.json?.asset?.path;
 
     if (!fileId && !filePath) {
       console.error("1min.AI upload response missing file identifier:", uploadParsed.text);
@@ -104,6 +112,7 @@ serve(async (req) => {
       "Extract all text from this resume document exactly as written. Preserve section headings, bullet points, and line breaks. Return plain text only.";
 
     const extractionAttempts = [
+      // Preferred: files attachment with UUID
       fileId
         ? {
             type: "UNIFY_CHAT_WITH_AI",
@@ -116,6 +125,20 @@ serve(async (req) => {
             },
           }
         : null,
+      // Fallback: some responses provide only path/key; try it in files too
+      filePath
+        ? {
+            type: "UNIFY_CHAT_WITH_AI",
+            model: "gpt-4o-mini",
+            promptObject: {
+              prompt: extractPrompt,
+              attachments: {
+                files: [filePath],
+              },
+            },
+          }
+        : null,
+      // For images, also try images attachment
       filePath && isImage
         ? {
             type: "UNIFY_CHAT_WITH_AI",
@@ -129,6 +152,13 @@ serve(async (req) => {
           }
         : null,
     ].filter(Boolean) as Array<Record<string, unknown>>;
+
+    console.log("extract-resume upload refs", {
+      fileId: fileId || null,
+      filePath: filePath || null,
+      attempts: extractionAttempts.length,
+      isImage,
+    });
 
     let lastErrorStatus = 500;
     let lastErrorText = "No extraction attempts were made.";

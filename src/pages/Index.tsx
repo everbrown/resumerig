@@ -123,8 +123,11 @@ const Index = () => {
         result.pivotPitch
       );
       setOutreachResult(data);
-      // Update balance after successful deduction
-      setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
+      sessionStorage.setItem("rr_outreach_used", "1");
+      // Only deduct balance if they had credits to spend
+      if (creditStatus.balance > 0) {
+        setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
+      }
       toast.success("Outreach messages generated!");
     } catch (err: any) {
       const msg = err?.message || "Outreach generation failed.";

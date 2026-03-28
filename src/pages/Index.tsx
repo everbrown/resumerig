@@ -93,6 +93,7 @@ const Index = () => {
             value={jobDescription}
             onChange={setJobDescription}
             icon={<Target className="h-5 w-5" />}
+            autoExpand
           />
         </motion.div>
 

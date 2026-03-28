@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -64,34 +63,34 @@ serve(async (req) => {
       );
     }
 
-    const ONEMIN_AI_API_KEY = Deno.env.get("ONEMIN_AI_API_KEY");
-    if (!ONEMIN_AI_API_KEY) {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
       return new Response(
-        JSON.stringify({ error: "ONEMIN_AI_API_KEY is not configured" }),
+        JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const userPrompt = `TUNED RESUME:\n${tunedResume}\n\nTARGET JOB DESCRIPTION:\n${jobDescription}\n\nPIVOT PITCH:\n${pivotPitch}`;
 
-    const response = await fetch("https://api.1min.ai/api/chat-with-ai", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "API-KEY": ONEMIN_AI_API_KEY,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        type: "UNIFY_CHAT_WITH_AI",
-        model: "claude-3-5-sonnet-20241022",
-        promptObject: {
-          prompt: `${SYSTEM_PROMPT}\n\n${userPrompt}`,
-        },
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("1min.AI error:", response.status, errorText);
+      console.error("AI gateway error:", response.status, errorText);
       return new Response(
         JSON.stringify({ error: `AI service error [${response.status}]` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -99,7 +98,7 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const resultText = data?.aiRecord?.aiRecordDetail?.resultText || data?.result || data?.content || "";
+    const resultText = data?.choices?.[0]?.message?.content || "";
 
     let parsed;
     try {

@@ -14,8 +14,21 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Playfair Display', 'serif'],
-        body: ['DM Sans', 'sans-serif'],
+        display: ['"Instrument Serif"', 'serif'],
+        body: ['Inter', 'sans-serif'],
+        mono: ['"Geist Mono"', 'monospace'],
+      },
+      fontSize: {
+        'xs': ['0.64rem', { lineHeight: '1.4' }],
+        'sm': ['0.8rem', { lineHeight: '1.5' }],
+        'base': ['1rem', { lineHeight: '1.6' }],
+        'lg': ['1.25rem', { lineHeight: '1.5' }],
+        'xl': ['1.563rem', { lineHeight: '1.35' }],
+        '2xl': ['1.953rem', { lineHeight: '1.25' }],
+        '3xl': ['2.441rem', { lineHeight: '1.2' }],
+        '4xl': ['3.052rem', { lineHeight: '1.1' }],
+        '5xl': ['3.815rem', { lineHeight: '1.05' }],
+        '6xl': ['4.768rem', { lineHeight: '1.0' }],
       },
       colors: {
         border: "hsl(var(--border))",

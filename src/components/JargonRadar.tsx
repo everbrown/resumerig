@@ -101,7 +101,7 @@ const JargonRadar = ({ jobDescription }: { jobDescription: string }) => {
     >
       <div className="flex items-center gap-2 mb-3">
         <Radar className="h-4 w-4 text-secondary" />
-        <span className="font-body text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <span className="font-mono text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           Jargon Radar — Keywords Detected
         </span>
       </div>

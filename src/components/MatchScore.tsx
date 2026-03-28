@@ -47,10 +47,10 @@ const MatchScore = ({ beforeScore, afterScore }: MatchScoreProps) => {
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-12">
         {/* Before */}
         <div className="flex flex-col items-center gap-1">
-          <span className="font-body text-xs uppercase tracking-widest text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
             Before
           </span>
-          <span className={`font-display text-5xl font-bold ${getColor(beforeScore)}`}>
+          <span className={`font-mono text-5xl font-bold tabular-nums ${getColor(beforeScore)}`}>
             {animatedBefore}%
           </span>
           <span className="font-body text-xs text-muted-foreground">Original Match</span>
@@ -63,22 +63,22 @@ const MatchScore = ({ beforeScore, afterScore }: MatchScoreProps) => {
           transition={{ delay: 0.6, duration: 0.4 }}
           className="flex flex-col items-center gap-1"
         >
-          <TrendingUp className="h-6 w-6 text-green-500" />
-          <span className="font-display text-lg font-bold text-green-500">
+          <TrendingUp className="h-6 w-6 text-secondary" />
+          <span className="font-mono text-lg font-bold text-secondary">
             +{improvement}%
           </span>
         </motion.div>
 
         {/* After */}
         <div className="flex flex-col items-center gap-1">
-          <span className="font-body text-xs uppercase tracking-widest text-muted-foreground">
+          <span className="font-mono text-xs uppercase tracking-widest text-muted-foreground">
             After
           </span>
           <motion.span
             initial={{ scale: 1 }}
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ delay: 1.2, duration: 0.4 }}
-            className={`font-display text-5xl font-bold ${getColor(afterScore)}`}
+            className={`font-mono text-5xl font-bold tabular-nums ${getColor(afterScore)}`}
           >
             {animatedAfter}%
           </motion.span>
@@ -94,9 +94,9 @@ const MatchScore = ({ beforeScore, afterScore }: MatchScoreProps) => {
         className="mt-6 text-center font-body text-sm text-muted-foreground"
       >
         Your JD match went from{" "}
-        <span className={`font-semibold ${getColor(beforeScore)}`}>{beforeScore}%</span>
+        <span className={`font-mono font-semibold ${getColor(beforeScore)}`}>{beforeScore}%</span>
         {" "}to{" "}
-        <span className={`font-semibold ${getColor(afterScore)}`}>{afterScore}%</span>!
+        <span className={`font-mono font-semibold ${getColor(afterScore)}`}>{afterScore}%</span>!
       </motion.p>
     </motion.div>
   );

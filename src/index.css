@@ -43,8 +43,9 @@
     --sidebar-border: 220 20% 20%;
     --sidebar-ring: 38 60% 55%;
 
-    --font-display: 'Playfair Display', serif;
-    --font-body: 'DM Sans', sans-serif;
+    --font-display: 'Instrument Serif', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Geist Mono', monospace;
 
     --gradient-hero: linear-gradient(135deg, hsl(220 25% 12%), hsl(220 20% 22%));
     --gradient-accent: linear-gradient(135deg, hsl(38 60% 55%), hsl(28 70% 50%));

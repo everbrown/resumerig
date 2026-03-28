@@ -266,7 +266,7 @@ const Index = () => {
               />
             </ResultSection>
 
-            <ResultSection number="03" title="Your Tuned Resume" delay={0.25}>
+            <ResultSection number="03" title="Your Refined Resume" delay={0.25}>
               {result.titleChanges && result.titleChanges.length > 0 && (
                 <div className="mb-4 rounded-lg border border-secondary/30 bg-secondary/5 p-4 space-y-2">
                   <p className="font-mono text-xs uppercase tracking-wider text-secondary font-semibold">Suggested Title Updates</p>

@@ -47,7 +47,7 @@ const Terms = () => {
           <section>
             <h2 className="font-display text-lg font-semibold text-foreground">2. Description of Service</h2>
             <p>
-              ResumeRig is an AI-powered résumé optimization platform that: (a) analyzes your résumé content against a target job description; (b) generates a tuned version of your résumé optimized for applicant tracking systems (ATS) and human reviewers; (c) identifies potential decision-makers at target companies via publicly available LinkedIn data; and (d) drafts personalized outreach messages. The Service is provided on a credit-based system.
+              ResumeRig is an AI-powered résumé optimization platform that: (a) analyzes your résumé content against a target job description; (b) generates a refined version of your résumé optimized for applicant tracking systems (ATS) and human reviewers; (c) identifies potential decision-makers at target companies via publicly available LinkedIn data; and (d) drafts personalized outreach messages. The Service is provided on a credit-based system.
             </p>
           </section>
 
@@ -99,7 +99,7 @@ const Terms = () => {
 
             <h3 className="font-display text-base font-medium text-foreground mt-4">5.2 AI-Generated Output</h3>
             <p>
-              Subject to your compliance with these Terms, we assign to you all rights, title, and interest in the AI-generated output (including tuned résumés, outreach messages, and analysis results) produced by the Service from your User Content ("Output"). You are solely responsible for reviewing, verifying, and editing any Output before use. Output is provided "as is" — see Section 9 for warranty disclaimers.
+              Subject to your compliance with these Terms, we assign to you all rights, title, and interest in the AI-generated output (including refined résumés, outreach messages, and analysis results) produced by the Service from your User Content ("Output"). You are solely responsible for reviewing, verifying, and editing any Output before use. Output is provided "as is" — see Section 9 for warranty disclaimers.
             </p>
 
             <h3 className="font-display text-base font-medium text-foreground mt-4">5.3 Our Intellectual Property</h3>

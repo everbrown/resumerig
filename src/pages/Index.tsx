@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { FileText, Target, ArrowRight, Sparkles, Send } from "lucide-react";
+import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import ResumeInput from "@/components/ResumeInput";
 import TranslatorTable from "@/components/TranslatorTable";
@@ -19,6 +21,8 @@ import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
 
 const Index = () => {
+  const { user, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
   const [resume, setResume] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -51,6 +55,11 @@ const Index = () => {
   const showRadar = jobDescription.trim().length > 30 && !result;
 
   const handleAnalyze = async () => {
+    if (!user) {
+      navigate("/auth");
+      return;
+    }
+
     // Check credit status: first-use-free or has credits
     if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
       setShowPaywall(true);

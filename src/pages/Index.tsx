@@ -45,6 +45,27 @@ const Index = () => {
     }
   };
 
+  const handleOutreach = async () => {
+    if (!result) return;
+    setOutreachLoading(true);
+    setOutreachResult(null);
+
+    try {
+      const data = await generateOutreach(
+        result.tunedResume,
+        jobDescription,
+        result.pivotPitch
+      );
+      setOutreachResult(data);
+      toast.success("Outreach messages generated!");
+    } catch (err: any) {
+      const msg = err?.message || "Outreach generation failed.";
+      toast.error(msg);
+    } finally {
+      setOutreachLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}

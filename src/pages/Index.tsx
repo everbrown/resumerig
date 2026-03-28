@@ -266,6 +266,18 @@ const Index = () => {
             </ResultSection>
 
             <ResultSection number="03" title="Your Tuned Resume" delay={0.25}>
+              {result.titleChanges && result.titleChanges.length > 0 && (
+                <div className="mb-4 rounded-lg border border-secondary/30 bg-secondary/5 p-4 space-y-2">
+                  <p className="font-mono text-xs uppercase tracking-wider text-secondary font-semibold">Suggested Title Updates</p>
+                  {result.titleChanges.map((tc, i) => (
+                    <div key={i} className="flex items-center gap-3 text-sm font-body">
+                      <span className="line-through text-muted-foreground">{tc.originalTitle}</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-secondary shrink-0" />
+                      <span className="text-secondary font-semibold bg-secondary/10 px-2 py-0.5 rounded">{tc.suggestedTitle}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="font-body text-foreground leading-relaxed whitespace-pre-wrap">
                 {result.tunedResume}
               </div>

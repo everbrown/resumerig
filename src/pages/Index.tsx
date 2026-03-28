@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { FileText, Target, ArrowRight, Sparkles, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -13,8 +13,10 @@ import ComparisonSlider from "@/components/ComparisonSlider";
 import DraftingState from "@/components/DraftingState";
 import DiscoveryRadar from "@/components/DiscoveryRadar";
 import OutreachPanel from "@/components/OutreachPanel";
+import PaywallModal from "@/components/PaywallModal";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
+import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
 
 const Index = () => {
   const [resume, setResume] = useState("");
@@ -24,11 +26,37 @@ const Index = () => {
   const [outreachResult, setOutreachResult] = useState<OutreachResult | null>(null);
   const [outreachLoading, setOutreachLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [creditStatus, setCreditStatus] = useState<CreditStatus>({
+    hasUsedFreeCredit: false,
+    balance: 0,
+    isAuthenticated: false,
+  });
+
+  useEffect(() => {
+    getCreditStatus().then(setCreditStatus);
+    // Check for payment return
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      toast.success("Payment successful! Credits have been added.");
+      getCreditStatus().then(setCreditStatus);
+      window.history.replaceState({}, "", "/");
+    } else if (params.get("payment") === "canceled") {
+      toast.info("Payment was canceled.");
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
 
   const canSubmit = resume.trim().length > 20 && jobDescription.trim().length > 20;
   const showRadar = jobDescription.trim().length > 30 && !result;
 
   const handleAnalyze = async () => {
+    // Check credit status: first-use-free or has credits
+    if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
+      setShowPaywall(true);
+      return;
+    }
+
     setLoading(true);
     setError("");
     setResult(null);
@@ -36,6 +64,17 @@ const Index = () => {
     try {
       const data = await analyzeCareerPivot(resume, jobDescription);
       setResult(data);
+
+      // Mark free credit as used after first successful tune
+      if (!creditStatus.hasUsedFreeCredit) {
+        await markFreeCreditUsed();
+        setCreditStatus((prev) => ({ ...prev, hasUsedFreeCredit: true }));
+      } else {
+        // Deduct a credit for subsequent uses
+        const { deductCredit } = await import("@/lib/credits");
+        await deductCredit();
+        setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
+      }
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
       setError(msg);
@@ -194,6 +233,8 @@ const Index = () => {
           </div>
         )}
       </main>
+
+      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} />
     </div>
   );
 };

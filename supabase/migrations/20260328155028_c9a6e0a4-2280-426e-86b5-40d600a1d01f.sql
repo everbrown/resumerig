@@ -1,0 +1,1 @@
+ALTER TABLE public.credit_balances ADD COLUMN IF NOT EXISTS has_used_free_credit boolean NOT NULL DEFAULT false;

@@ -24,8 +24,8 @@ import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/cr
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
-  const [resume, setResume] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
+  const [resume, setResume] = useState(() => sessionStorage.getItem("rr_resume") || "");
+  const [jobDescription, setJobDescription] = useState(() => sessionStorage.getItem("rr_jd") || "");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [outreachResult, setOutreachResult] = useState<OutreachResult | null>(null);

@@ -7,6 +7,7 @@ import ResumeInput from "@/components/ResumeInput";
 import TranslatorTable from "@/components/TranslatorTable";
 import ResultSection from "@/components/ResultSection";
 import PivotPitch from "@/components/PivotPitch";
+import MatchScore from "@/components/MatchScore";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 
 const Index = () => {
@@ -118,11 +119,13 @@ const Index = () => {
         {/* Results */}
         {result && (
           <div className="space-y-10 pb-16">
-            <ResultSection number="01" title="Industry Translator Key" delay={0}>
+            <MatchScore score={result.matchScore} />
+
+            <ResultSection number="01" title="Industry Translator Key" delay={0.1}>
               <TranslatorTable entries={result.translatorTable} />
             </ResultSection>
 
-            <ResultSection number="02" title="Your Tuned Resume" delay={0.15}>
+            <ResultSection number="02" title="Your Tuned Resume" delay={0.2}>
               <div className="font-body text-foreground leading-relaxed whitespace-pre-wrap">
                 {result.tunedResume}
               </div>

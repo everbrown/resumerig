@@ -29,7 +29,7 @@ const ComparisonSlider = ({ originalBullets, tunedBullets }: ComparisonSliderPro
             {/* Tuned version always visible */}
             <div className="p-4 bg-card">
               <div className="flex items-start gap-2">
-                <span className="shrink-0 mt-0.5 inline-block h-2 w-2 rounded-full bg-green-500" />
+                <span className="shrink-0 mt-0.5 inline-block h-2 w-2 rounded-full bg-secondary" />
                 <p className="font-body text-sm text-foreground leading-relaxed">{tuned}</p>
               </div>
             </div>

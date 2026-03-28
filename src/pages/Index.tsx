@@ -164,11 +164,11 @@ const Index = () => {
               Resume<span className="text-secondary">Rig</span>
             </h1>
             <p className="mt-2 font-mono text-sm uppercase tracking-[0.2em] text-secondary/80">
-              Re-engineer your career
+              Your unfair advantage
             </p>
             <p className="mt-4 font-body text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
-              Mid-career professionals don't need a new resume — they need a <em className="text-primary-foreground not-italic font-medium">translated</em> one.
-              Your 10 years of expertise speaks volumes. Let's make it fluent in your next industry.
+              Stop sending the same generic resume everywhere. ResumeRig <em className="text-primary-foreground not-italic font-medium">re-engineers</em> your
+              experience to speak the exact language of every job you target.
             </p>
           </motion.div>
         </div>

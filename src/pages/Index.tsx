@@ -322,27 +322,26 @@ const Index = () => {
             </ResultSection>
 
             {/* Outreach Section */}
-            <ResultSection number="05" title="LinkedIn Outreach Agent" delay={0.35}>
+            <ResultSection number="05" title="Outreach Message Generator" delay={0.35}>
               {!outreachResult && !outreachLoading && (
                 <div className="text-center space-y-4">
                   <p className="font-body text-muted-foreground">
-                    Find decision-makers and generate personalized outreach messages.
+                    Generate role-based outreach templates for hiring managers, peers, and recruiters at <strong className="text-foreground">{jobDescription.match(/(?:at|@)\s+(\S.+?)(?:\.|,|\n|$)/i)?.[1] || "the target company"}</strong>.
+                  </p>
+                  <p className="font-body text-xs text-muted-foreground/70 max-w-md mx-auto">
+                    These are AI-generated message templates based on typical org structures — not real LinkedIn profiles. Customize before sending.
                     {creditStatus.balance > 0 ? (
                       <span className="font-mono text-xs ml-2 text-secondary">
                         1 Credit · {creditStatus.balance} remaining
                       </span>
-                    ) : (
-                      <span className="font-mono text-xs ml-2 text-destructive">
-                        Requires 1 Credit
-                      </span>
-                    )}
+                    ) : null}
                   </p>
                   <Button
                     onClick={handleOutreach}
                     className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl shadow-[var(--shadow-elevated)]"
                   >
                     <Send className="h-4 w-4" />
-                    Find Decision-Makers
+                    Generate Outreach Messages
                   </Button>
                 </div>
               )}

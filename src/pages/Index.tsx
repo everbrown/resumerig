@@ -24,8 +24,8 @@ import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/cr
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
-  const [resume, setResume] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
+  const [resume, setResume] = useState(() => sessionStorage.getItem("rr_resume") || "");
+  const [jobDescription, setJobDescription] = useState(() => sessionStorage.getItem("rr_jd") || "");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [outreachResult, setOutreachResult] = useState<OutreachResult | null>(null);
@@ -56,6 +56,10 @@ const Index = () => {
       window.history.replaceState({}, "", "/");
     }
   }, []);
+
+  // Persist inputs to sessionStorage so they survive auth redirect
+  useEffect(() => { sessionStorage.setItem("rr_resume", resume); }, [resume]);
+  useEffect(() => { sessionStorage.setItem("rr_jd", jobDescription); }, [jobDescription]);
 
   const canSubmit = resume.trim().length > 20 && jobDescription.trim().length > 20;
   const showRadar = jobDescription.trim().length > 30 && !result;

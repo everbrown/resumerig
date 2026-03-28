@@ -64,6 +64,17 @@ const Index = () => {
     try {
       const data = await analyzeCareerPivot(resume, jobDescription);
       setResult(data);
+
+      // Mark free credit as used after first successful tune
+      if (!creditStatus.hasUsedFreeCredit) {
+        await markFreeCreditUsed();
+        setCreditStatus((prev) => ({ ...prev, hasUsedFreeCredit: true }));
+      } else {
+        // Deduct a credit for subsequent uses
+        const { deductCredit } = await import("@/lib/credits");
+        await deductCredit();
+        setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
+      }
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
       setError(msg);

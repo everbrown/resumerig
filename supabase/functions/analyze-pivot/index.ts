@@ -19,8 +19,10 @@ Step 3 — De-Niche & Universalize: Strip away hyper-specific industry acronyms 
 Step 4 — Tone Alignment: If the JD is from a startup, use "Velocity" and "Scalability." If it's a legacy corporation, use "Governance" and "Risk Mitigation."
 
 CRITICAL RULES:
-- NEVER change employer/company names, school names, dates of employment, or personal details (name, contact info). Only rewrite bullet points, skills, and summary sections.
-- The tunedResume must keep every original workplace, institution, job title, and date exactly as they appear in the source resume.
+- NEVER change employer/company names, school/university names, degree names (e.g. "B.S. in Biology", "MBA"), dates of employment, graduation dates, or personal details (name, contact info, address, phone, email).
+- Only rewrite bullet points, skills descriptions, and summary/objective sections.
+- The tunedResume must keep every original workplace, institution, degree, certification, and date exactly as they appear in the source resume.
+- You MAY suggest improved job titles that better align with the target JD's language. When you do, return the original and suggested title in the titleChanges array. In the tunedResume text itself, use the ORIGINAL title — the UI will handle displaying both.
 
 IMPORTANT: You MUST respond by calling the provided function tool. Do NOT return plain text.`;
 
@@ -95,10 +97,23 @@ serve(async (req) => {
                     items: { type: "string" },
                     description: "Rewritten bullets matching originalBullets 1:1",
                   },
-                  tunedResume: { type: "string", description: "Full rewritten resume text" },
+                  tunedResume: { type: "string", description: "Full rewritten resume text. Keep original job titles, company names, schools, degrees, and dates unchanged." },
                   pivotPitch: { type: "string", description: "2-sentence elevator pitch" },
+                  titleChanges: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        originalTitle: { type: "string", description: "The exact job title from the original resume" },
+                        suggestedTitle: { type: "string", description: "The suggested industry-aligned title" },
+                      },
+                      required: ["originalTitle", "suggestedTitle"],
+                      additionalProperties: false,
+                    },
+                    description: "List of job titles where a more industry-aligned alternative is suggested. Can be empty if no changes needed.",
+                  },
                 },
-                required: ["beforeScore", "afterScore", "translatorTable", "originalBullets", "tunedBullets", "tunedResume", "pivotPitch"],
+                required: ["beforeScore", "afterScore", "translatorTable", "originalBullets", "tunedBullets", "tunedResume", "pivotPitch", "titleChanges"],
                 additionalProperties: false,
               },
             },

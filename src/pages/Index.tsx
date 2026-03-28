@@ -106,8 +106,9 @@ const Index = () => {
   const handleOutreach = async () => {
     if (!result) return;
 
-    // Check credits before calling the edge function
-    if (creditStatus.balance <= 0) {
+    // First outreach is free (same session as first tune); otherwise require credits
+    const isFirstFreeOutreach = creditStatus.hasUsedFreeCredit && !outreachResult && creditStatus.balance <= 0 && !sessionStorage.getItem("rr_outreach_used");
+    if (!isFirstFreeOutreach && creditStatus.balance <= 0) {
       setShowPaywall(true);
       return;
     }

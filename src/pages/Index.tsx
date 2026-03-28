@@ -57,6 +57,10 @@ const Index = () => {
     }
   }, []);
 
+  // Persist inputs to sessionStorage so they survive auth redirect
+  useEffect(() => { sessionStorage.setItem("rr_resume", resume); }, [resume]);
+  useEffect(() => { sessionStorage.setItem("rr_jd", jobDescription); }, [jobDescription]);
+
   const canSubmit = resume.trim().length > 20 && jobDescription.trim().length > 20;
   const showRadar = jobDescription.trim().length > 30 && !result;
 

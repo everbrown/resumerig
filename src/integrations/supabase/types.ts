@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      cover_letters: {
+        Row: {
+          cover_letter: string
+          created_at: string
+          id: string
+          job_description: string
+          resume_history_id: string | null
+          user_id: string
+        }
+        Insert: {
+          cover_letter: string
+          created_at?: string
+          id?: string
+          job_description: string
+          resume_history_id?: string | null
+          user_id: string
+        }
+        Update: {
+          cover_letter?: string
+          created_at?: string
+          id?: string
+          job_description?: string
+          resume_history_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cover_letters_resume_history_id_fkey"
+            columns: ["resume_history_id"]
+            isOneToOne: false
+            referencedRelation: "resume_history"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_balances: {
         Row: {
           balance: number
@@ -41,12 +76,114 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_codes: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          max_uses: number
+          user_id: string
+          uses: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          max_uses?: number
+          user_id: string
+          uses?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          max_uses?: number
+          user_id?: string
+          uses?: number
+        }
+        Relationships: []
+      }
+      referral_redemptions: {
+        Row: {
+          created_at: string
+          id: string
+          redeemed_by: string
+          referral_code_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          redeemed_by: string
+          referral_code_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          redeemed_by?: string
+          referral_code_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_redemptions_referral_code_id_fkey"
+            columns: ["referral_code_id"]
+            isOneToOne: false
+            referencedRelation: "referral_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resume_history: {
+        Row: {
+          after_score: number | null
+          before_score: number | null
+          created_at: string
+          id: string
+          job_description: string
+          original_resume: string
+          pivot_pitch: string | null
+          target_role: string | null
+          title_changes: Json | null
+          translator_table: Json | null
+          tuned_resume: string
+          user_id: string
+        }
+        Insert: {
+          after_score?: number | null
+          before_score?: number | null
+          created_at?: string
+          id?: string
+          job_description: string
+          original_resume: string
+          pivot_pitch?: string | null
+          target_role?: string | null
+          title_changes?: Json | null
+          translator_table?: Json | null
+          tuned_resume: string
+          user_id: string
+        }
+        Update: {
+          after_score?: number | null
+          before_score?: number | null
+          created_at?: string
+          id?: string
+          job_description?: string
+          original_resume?: string
+          pivot_pitch?: string | null
+          target_role?: string | null
+          title_changes?: Json | null
+          translator_table?: Json | null
+          tuned_resume?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       deduct_credit: { Args: { p_user_id: string }; Returns: number }
+      redeem_referral: { Args: { p_code: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

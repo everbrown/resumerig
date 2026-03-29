@@ -59,7 +59,7 @@ const PaywallModal = ({ open, onClose }: PaywallModalProps) => {
                 Your first one was on us!
               </h2>
               <p className="mt-2 font-body text-muted-foreground max-w-sm mx-auto">
-                Get more industry-specific tunes and Pivot Pitches to land your dream role.
+                Get more industry-specific refinements and Pivot Pitches to land your dream role.
               </p>
             </div>
 

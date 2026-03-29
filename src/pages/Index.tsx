@@ -155,8 +155,7 @@ const Index = () => {
   const handleOutreach = async () => {
     if (!result) return;
 
-    const isFirstFreeOutreach = creditStatus.hasUsedFreeCredit && !outreachResult && creditStatus.balance <= 0 && !sessionStorage.getItem("rr_outreach_used");
-    if (!isFirstFreeOutreach && creditStatus.balance <= 0) {
+    if (creditStatus.balance <= 0) {
       setShowPaywall(true);
       return;
     }
@@ -171,14 +170,15 @@ const Index = () => {
         result.pivotPitch
       );
       setOutreachResult(data);
-      sessionStorage.setItem("rr_outreach_used", "1");
-      if (creditStatus.balance > 0) {
-        setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
-      }
+      refreshCredits(); // Refresh from server — deduction happened server-side
       toast.success("Outreach messages generated!");
     } catch (err: any) {
       const msg = err?.message || "Outreach generation failed.";
-      toast.error(msg);
+      if (msg.includes("No credits")) {
+        setShowPaywall(true);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setOutreachLoading(false);
     }
@@ -401,11 +401,7 @@ const Index = () => {
                 pivotPitch={result.pivotPitch}
                 hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
                 onCreditsNeeded={() => setShowPaywall(true)}
-                onCreditUsed={() => {
-                  if (creditStatus.balance > 0) {
-                    setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
-                  }
-                }}
+                onCreditUsed={refreshCredits}
               />
             </ResultSection>
 

@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getHistory, deleteHistoryEntry, type ResumeHistoryEntry } from "@/lib/resumeHistory";
-import { getCreditStatus, type CreditStatus } from "@/lib/credits";
-import { Clock, Trash2, ArrowLeft, Eye, Sparkles } from "lucide-react";
+import { getCreditStatus, createCheckoutSession, type CreditStatus } from "@/lib/credits";
+import { Clock, Trash2, ArrowLeft, Eye, Sparkles, Zap, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import ReferralPanel from "@/components/ReferralPanel";
@@ -15,6 +15,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [history, setHistory] = useState<ResumeHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null);
   const [creditStatus, setCreditStatus] = useState<CreditStatus>({
     hasUsedFreeCredit: false,
     balance: 0,
@@ -49,6 +50,18 @@ const Dashboard = () => {
     getCreditStatus().then(setCreditStatus);
   };
 
+  const handlePurchase = async (pack: "starter" | "power") => {
+    setPurchaseLoading(pack);
+    try {
+      const url = await createCheckoutSession(pack);
+      window.open(url, "_blank");
+    } catch (err: any) {
+      toast.error(err?.message || "Checkout failed");
+    } finally {
+      setPurchaseLoading(null);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -76,16 +89,59 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {creditStatus.balance > 0 && (
-              <span className="font-mono text-sm text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-3 py-1">
-                {creditStatus.balance} credits
-              </span>
-            )}
+            <span className={`font-mono text-sm ${creditStatus.balance > 0 ? 'text-secondary' : 'text-muted-foreground'} bg-secondary/10 border border-secondary/30 rounded-full px-3 py-1`}>
+              {creditStatus.balance} credit{creditStatus.balance !== 1 ? "s" : ""}
+            </span>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-10 space-y-8">
+        {/* Buy Credits Section */}
+        {creditStatus.balance <= 0 && creditStatus.hasUsedFreeCredit && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border-2 border-secondary/30 bg-secondary/5 p-6"
+          >
+            <div className="text-center mb-5">
+              <h3 className="font-display text-lg font-bold text-foreground">Need more credits?</h3>
+              <p className="font-body text-sm text-muted-foreground mt-1">
+                Unlock more refinements, cover letters, and outreach messages.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 max-w-md mx-auto">
+              <button
+                onClick={() => handlePurchase("starter")}
+                disabled={purchaseLoading !== null}
+                className="rounded-xl border border-border bg-card p-4 text-center space-y-1 hover:border-secondary/50 transition-colors"
+              >
+                <Zap className="h-6 w-6 text-secondary mx-auto" />
+                <p className="font-display text-lg font-bold text-foreground">$9</p>
+                <p className="text-xs font-body text-muted-foreground">3 Credits</p>
+                <span className="inline-block mt-1 text-xs font-mono text-secondary bg-secondary/10 px-2 py-0.5 rounded-full">
+                  {purchaseLoading === "starter" ? "Redirecting..." : "Unlock Full Alignment"}
+                </span>
+              </button>
+              <button
+                onClick={() => handlePurchase("power")}
+                disabled={purchaseLoading !== null}
+                className="rounded-xl border-2 border-secondary bg-card p-4 text-center space-y-1 relative"
+              >
+                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground text-[10px] font-mono font-bold px-2 py-0.5 rounded-full">
+                  BEST VALUE
+                </span>
+                <Crown className="h-6 w-6 text-secondary mx-auto" />
+                <p className="font-display text-lg font-bold text-foreground">$27</p>
+                <p className="text-xs font-body text-muted-foreground">12 Credits</p>
+                <span className="inline-block mt-1 text-xs font-mono text-secondary bg-secondary/10 px-2 py-0.5 rounded-full">
+                  {purchaseLoading === "power" ? "Redirecting..." : "Best Value"}
+                </span>
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {/* Referral Panel */}
         <ReferralPanel isAuthenticated={!!user} onCreditsChanged={refreshCredits} />
 

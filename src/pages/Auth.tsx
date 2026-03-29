@@ -63,7 +63,7 @@ const Auth = () => {
   const getSubheading = () => {
     switch (view) {
       case "login": return "Sign in to continue re-engineering your resume";
-      case "signup": return "Your first resume tune is free — no credit card needed";
+      case "signup": return "Your first resume refinement is free — no credit card needed";
       case "forgot": return "We'll send you a link to reset your password";
     }
   };

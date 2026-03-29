@@ -48,7 +48,7 @@ const Privacy = () => {
             <ul className="list-disc pl-6 space-y-1">
               <li><strong>Account Information:</strong> When you create an account, we collect your email address and an encrypted password (hashed; we never store plaintext passwords).</li>
               <li><strong>Resume Content:</strong> The text of résumés, CVs, or professional summaries you paste or upload into the Service for analysis.</li>
-              <li><strong>Job Description Content:</strong> The text of job descriptions you provide for comparison and tuning purposes.</li>
+              <li><strong>Job Description Content:</strong> The text of job descriptions you provide for comparison and refinement purposes.</li>
               <li><strong>Payment Information:</strong> When you purchase credits, payment card details are collected and processed directly by our third-party payment processor, Stripe, Inc. We do not receive or store your full card number, CVV, or expiration date. We receive only a tokenized reference, the last four digits of your card, and your billing postal code.</li>
               <li><strong>Communications:</strong> If you contact us via email at support@resumerig.com, we collect the contents of your correspondence.</li>
             </ul>

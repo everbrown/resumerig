@@ -22,7 +22,7 @@ CRITICAL RULES:
 - NEVER change employer/company names, school/university names, degree names (e.g. "B.S. in Biology", "MBA"), dates of employment, graduation dates, or personal details (name, contact info, address, phone, email).
 - Only rewrite bullet points, skills descriptions, and summary/objective sections.
 - The tunedResume must keep every original workplace, institution, degree, certification, and date exactly as they appear in the source resume.
-- You MAY suggest improved job titles that better align with the target JD's language. When you do, return the original and suggested title in the titleChanges array. In the tunedResume text itself, use the ORIGINAL title — the UI will handle displaying both.
+- You MAY suggest improved job titles that better align with the target JD's language. When suggesting titles, FIRST identify the exact target role title from the Job Description (e.g. "Resource Deployment Manager") and use that as the primary basis for suggestions. Suggested titles should bridge the user's experience toward that specific target role, not generic industry titles. When you do, return the original and suggested title in the titleChanges array. In the tunedResume text itself, use the ORIGINAL title — the UI will handle displaying both.
 
 FORMATTING RULES FOR tunedResume:
 - Use clear section headings in ALL CAPS on their own line (e.g. SUMMARY, EXPERIENCE, EDUCATION, SKILLS, CERTIFICATIONS).

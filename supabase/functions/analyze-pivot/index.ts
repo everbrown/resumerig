@@ -202,6 +202,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
+        max_tokens: 16384,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
@@ -240,7 +241,7 @@ serve(async (req) => {
                     items: { type: "string" },
                     description: "Rewritten bullets matching originalBullets 1:1",
                   },
-                  tunedResume: { type: "string", description: "Full rewritten resume text. Keep original job titles, company names, schools, degrees, and dates unchanged." },
+                  tunedResume: { type: "string", description: "Full rewritten resume text with EVERY section, job entry, and bullet point included. Do NOT truncate or abbreviate. Keep original job titles, company names, schools, degrees, and dates unchanged." },
                   pivotPitch: { type: "string", description: "2-sentence elevator pitch" },
                   titleChanges: {
                     type: "array",

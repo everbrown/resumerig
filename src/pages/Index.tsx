@@ -401,11 +401,7 @@ const Index = () => {
                 pivotPitch={result.pivotPitch}
                 hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
                 onCreditsNeeded={() => setShowPaywall(true)}
-                onCreditUsed={() => {
-                  if (creditStatus.balance > 0) {
-                    setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
-                  }
-                }}
+                onCreditUsed={refreshCredits}
               />
             </ResultSection>
 

@@ -72,7 +72,7 @@ const PaywallModal = ({ open, onClose }: PaywallModalProps) => {
                   $9
                 </div>
                 <p className="text-sm font-body text-muted-foreground">3 Career Credits</p>
-                <p className="text-xs font-mono text-accent">$3 per tune</p>
+                <p className="text-xs font-mono text-accent">$3 per refinement</p>
                 <Button
                   onClick={() => handlePurchase("starter")}
                   disabled={loading !== null}
@@ -93,7 +93,7 @@ const PaywallModal = ({ open, onClose }: PaywallModalProps) => {
                   $27
                 </div>
                 <p className="text-sm font-body text-muted-foreground">12 Career Credits</p>
-                <p className="text-xs font-mono text-accent">$2.25 per tune</p>
+                <p className="text-xs font-mono text-accent">$2.25 per refinement</p>
                 <Button
                   onClick={() => handlePurchase("power")}
                   disabled={loading !== null}

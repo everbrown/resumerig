@@ -37,10 +37,14 @@ const CoverLetterPanel = ({
     try {
       const result = await generateCoverLetter(tunedResume, jobDescription, pivotPitch);
       setCoverLetter(result);
-      onCreditUsed();
+      onCreditUsed(); // Refresh credit display — deduction already happened server-side
       toast.success("Cover letter generated!");
     } catch (err: any) {
-      toast.error(err?.message || "Failed to generate cover letter");
+      if (err?.message?.includes("No credits")) {
+        onCreditsNeeded();
+      } else {
+        toast.error(err?.message || "Failed to generate cover letter");
+      }
     } finally {
       setLoading(false);
     }

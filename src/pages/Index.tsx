@@ -281,9 +281,7 @@ const Index = () => {
                   ))}
                 </div>
               )}
-              <div className="font-body text-foreground leading-relaxed whitespace-pre-wrap">
-                {result.tunedResume}
-              </div>
+              <ResumeDisplay text={result.tunedResume} />
               <div className="flex gap-3 mt-4 pt-4 border-t border-border">
                 <Button
                   size="sm"

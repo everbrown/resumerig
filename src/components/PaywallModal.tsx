@@ -78,7 +78,7 @@ const PaywallModal = ({ open, onClose }: PaywallModalProps) => {
                   disabled={loading !== null}
                   className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl"
                 >
-                  {loading === "starter" ? "Redirecting..." : "Get Started"}
+                  {loading === "starter" ? "Redirecting..." : "Unlock Full Alignment"}
                 </Button>
               </div>
 

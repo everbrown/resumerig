@@ -4,14 +4,14 @@ import { Loader2 } from "lucide-react";
 
 const DRAFTING_MESSAGES = [
   "Scanning job description for ATS triggers...",
-  "Mapping your transferable skills...",
-  "Translating industry jargon...",
-  "Applying the Senior PM standard...",
-  "De-niching your experience...",
-  "Quantifying your impact statements...",
-  "Aligning tone to target company culture...",
+  "Mapping transferable competencies...",
+  "Re-engineering bullets for domain alignment...",
+  "Applying target-domain terminology...",
+  "Bridging cross-industry language gaps...",
+  "Quantifying impact statements...",
+  "Running domain alignment protocol...",
   "Crafting your pivot pitch...",
-  "Polishing final output...",
+  "Finalizing strategic output...",
 ];
 
 const DraftingState = () => {

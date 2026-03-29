@@ -193,8 +193,8 @@ const Index = () => {
               Your unfair advantage
             </p>
             <p className="mt-4 font-body text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
-               Stop sending the same generic resume everywhere. ResumeRig <em className="text-primary-foreground not-italic font-medium">re-engineers</em> your
-               experience by identifying the target domain and translating your skills into its language — bridging industry gaps so your resume speaks directly to every role you pursue.
+               Switching industries? Your experience doesn't translate — and recruiters won't do it for you. ResumeRig <em className="text-primary-foreground not-italic font-medium">identifies your target domain</em> and
+               re-engineers every bullet to speak its language, bridging the gap so your resume lands instead of getting filtered out.
             </p>
           </motion.div>
         </div>

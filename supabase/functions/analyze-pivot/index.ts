@@ -202,6 +202,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
+        max_tokens: 16384,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
@@ -240,7 +241,7 @@ serve(async (req) => {
                     items: { type: "string" },
                     description: "Rewritten bullets matching originalBullets 1:1",
                   },
-                  tunedResume: { type: "string", description: "Full rewritten resume text. Keep original job titles, company names, schools, degrees, and dates unchanged." },
+                  tunedResume: { type: "string", description: "Full rewritten resume text with EVERY section, job entry, and bullet point included. Do NOT truncate or abbreviate. Keep original job titles, company names, schools, degrees, and dates unchanged." },
                   pivotPitch: { type: "string", description: "2-sentence elevator pitch" },
                   titleChanges: {
                     type: "array",
@@ -291,6 +292,16 @@ serve(async (req) => {
 
     const data = await response.json();
 
+    // Check for truncation
+    const finishReason = data?.choices?.[0]?.finish_reason;
+    if (finishReason === "length") {
+      console.error("Response was truncated due to token limit");
+      return new Response(
+        JSON.stringify({ error: "Your resume is very detailed — the analysis was cut short. Please try again or shorten your resume slightly." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Extract structured output from tool call
     const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
@@ -301,7 +312,16 @@ serve(async (req) => {
       );
     }
 
-    const parsed = JSON.parse(toolCall.function.arguments);
+    let parsed: any;
+    try {
+      parsed = JSON.parse(toolCall.function.arguments);
+    } catch (parseErr) {
+      console.error("Failed to parse tool call arguments (likely truncated):", toolCall.function.arguments?.slice(-200));
+      return new Response(
+        JSON.stringify({ error: "The AI response was incomplete. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (typeof parsed?.tunedResume === "string") {
       const { tunedResume, sourceTitles } = lockImmutableIdentityLines(resume, parsed.tunedResume);

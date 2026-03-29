@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import ResumeDisplay from "@/components/ResumeDisplay";
 import { motion } from "framer-motion";
-import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut, Copy, Download, Check, FileDown } from "lucide-react";
+import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut, Copy, Download, Check, FileDown, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import ResumeInput from "@/components/ResumeInput";
@@ -18,14 +18,21 @@ import DiscoveryRadar from "@/components/DiscoveryRadar";
 import OutreachPanel from "@/components/OutreachPanel";
 import PaywallModal from "@/components/PaywallModal";
 import Footer from "@/components/Footer";
+import BeforeAfterShowcase from "@/components/BeforeAfterShowcase";
+import ATSScore from "@/components/ATSScore";
+import CoverLetterPanel from "@/components/CoverLetterPanel";
+import ReferralPanel from "@/components/ReferralPanel";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
 import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
+import { saveToHistory } from "@/lib/resumeHistory";
+import { redeemReferralCode } from "@/lib/referrals";
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [resume, setResume] = useState(() => sessionStorage.getItem("rr_resume") || "");
   const [jobDescription, setJobDescription] = useState(() => sessionStorage.getItem("rr_jd") || "");
   const [loading, setLoading] = useState(false);
@@ -41,17 +48,57 @@ const Index = () => {
     isAuthenticated: false,
   });
 
-  // Refresh credits whenever auth state changes (login/logout)
-  useEffect(() => {
+  // Refresh credits whenever auth state changes
+  const refreshCredits = () => {
     getCreditStatus().then(setCreditStatus);
+  };
+
+  useEffect(() => {
+    refreshCredits();
+  }, [user]);
+
+  // Handle referral code from URL
+  useEffect(() => {
+    const refCode = searchParams.get("ref");
+    if (refCode && user) {
+      // Store and attempt to redeem after auth
+      const alreadyTried = sessionStorage.getItem("rr_ref_tried");
+      if (alreadyTried !== refCode) {
+        sessionStorage.setItem("rr_ref_tried", refCode);
+        redeemReferralCode(refCode).then((result) => {
+          if (result === "success") {
+            toast.success("Referral code redeemed! You earned 1 free credit. 🎉");
+            refreshCredits();
+          }
+        }).catch(() => {});
+      }
+    } else if (refCode && !user && !authLoading) {
+      // Store for after login
+      sessionStorage.setItem("rr_pending_ref", refCode);
+    }
+  }, [searchParams, user, authLoading]);
+
+  // Redeem pending referral after login
+  useEffect(() => {
+    if (user) {
+      const pending = sessionStorage.getItem("rr_pending_ref");
+      if (pending) {
+        sessionStorage.removeItem("rr_pending_ref");
+        redeemReferralCode(pending).then((result) => {
+          if (result === "success") {
+            toast.success("Referral code redeemed! You earned 1 free credit. 🎉");
+            refreshCredits();
+          }
+        }).catch(() => {});
+      }
+    }
   }, [user]);
 
   useEffect(() => {
-    // Check for payment return
     const params = new URLSearchParams(window.location.search);
     if (params.get("payment") === "success") {
       toast.success("Payment successful! Credits have been added.");
-      getCreditStatus().then(setCreditStatus);
+      refreshCredits();
       window.history.replaceState({}, "", "/");
     } else if (params.get("payment") === "canceled") {
       toast.info("Payment was canceled.");
@@ -59,7 +106,6 @@ const Index = () => {
     }
   }, []);
 
-  // Persist inputs to sessionStorage so they survive auth redirect
   useEffect(() => { sessionStorage.setItem("rr_resume", resume); }, [resume]);
   useEffect(() => { sessionStorage.setItem("rr_jd", jobDescription); }, [jobDescription]);
 
@@ -72,7 +118,6 @@ const Index = () => {
       return;
     }
 
-    // Check credit status: first-use-free or has credits
     if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
       setShowPaywall(true);
       return;
@@ -86,12 +131,14 @@ const Index = () => {
       const data = await analyzeCareerPivot(resume, jobDescription);
       setResult(data);
 
-      // Mark free credit as used after first successful tune
+      // Save to history
+      const targetRole = jobDescription.match(/(?:title|role|position)[:\s]+([^\n,]+)/i)?.[1]?.trim();
+      saveToHistory(resume, jobDescription, data, targetRole).catch(console.error);
+
       if (!creditStatus.hasUsedFreeCredit) {
         await markFreeCreditUsed();
         setCreditStatus((prev) => ({ ...prev, hasUsedFreeCredit: true }));
       } else {
-        // Deduct a credit for subsequent uses
         const { deductCredit } = await import("@/lib/credits");
         await deductCredit();
         setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
@@ -108,7 +155,6 @@ const Index = () => {
   const handleOutreach = async () => {
     if (!result) return;
 
-    // First outreach is free (same session as first tune); otherwise require credits
     const isFirstFreeOutreach = creditStatus.hasUsedFreeCredit && !outreachResult && creditStatus.balance <= 0 && !sessionStorage.getItem("rr_outreach_used");
     if (!isFirstFreeOutreach && creditStatus.balance <= 0) {
       setShowPaywall(true);
@@ -126,7 +172,6 @@ const Index = () => {
       );
       setOutreachResult(data);
       sessionStorage.setItem("rr_outreach_used", "1");
-      // Only deduct balance if they had credits to spend
       if (creditStatus.balance > 0) {
         setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
       }
@@ -155,6 +200,13 @@ const Index = () => {
                   {creditStatus.balance} credits
                 </span>
               )}
+              <button
+                onClick={() => navigate("/dashboard")}
+                className="flex items-center gap-1 text-xs font-body text-primary-foreground/60 hover:text-primary-foreground transition-colors"
+              >
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Dashboard
+              </button>
               <button
                 onClick={signOut}
                 className="flex items-center gap-1 text-xs font-body text-primary-foreground/60 hover:text-primary-foreground transition-colors"
@@ -201,6 +253,9 @@ const Index = () => {
         </div>
       </header>
 
+      {/* Before/After Showcase - only show when no results */}
+      {!result && <BeforeAfterShowcase />}
+
       {/* Input Section */}
       <main className="mx-auto max-w-4xl px-6 py-12 space-y-12">
         <motion.div
@@ -230,7 +285,6 @@ const Index = () => {
           />
         </motion.div>
 
-        {/* Jargon Radar */}
         {showRadar && <JargonRadar jobDescription={jobDescription} />}
 
         <div className="flex justify-center">
@@ -245,7 +299,6 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Drafting State */}
         {loading && <DraftingState />}
 
         {error && (
@@ -255,7 +308,11 @@ const Index = () => {
         {/* Results */}
         {result && (
           <div className="space-y-10 pb-16">
-            <MatchScore beforeScore={result.beforeScore} afterScore={result.afterScore} />
+            {/* ATS Score + Match Score side by side */}
+            <div className="grid gap-6 md:grid-cols-2">
+              <MatchScore beforeScore={result.beforeScore} afterScore={result.afterScore} />
+              <ATSScore beforeScore={result.beforeScore} afterScore={result.afterScore} />
+            </div>
 
             <ResultSection number="01" title="Industry Translator Key" delay={0.1}>
               <TranslatorTable entries={result.translatorTable} />
@@ -336,8 +393,24 @@ const Index = () => {
               <PivotPitch pitch={result.pivotPitch} />
             </ResultSection>
 
+            {/* Cover Letter Generator */}
+            <ResultSection number="05" title="Cover Letter Generator" delay={0.33}>
+              <CoverLetterPanel
+                tunedResume={result.tunedResume}
+                jobDescription={jobDescription}
+                pivotPitch={result.pivotPitch}
+                hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                onCreditsNeeded={() => setShowPaywall(true)}
+                onCreditUsed={() => {
+                  if (creditStatus.balance > 0) {
+                    setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
+                  }
+                }}
+              />
+            </ResultSection>
+
             {/* Outreach Section */}
-            <ResultSection number="05" title="Outreach Message Generator" delay={0.35}>
+            <ResultSection number="06" title="Outreach Message Generator" delay={0.35}>
               {!outreachResult && !outreachLoading && (
                 <div className="text-center space-y-4">
                   <p className="font-body text-muted-foreground">
@@ -363,6 +436,11 @@ const Index = () => {
               {outreachLoading && <DiscoveryRadar />}
               {outreachResult && <OutreachPanel result={outreachResult} />}
             </ResultSection>
+
+            {/* Referral panel after results */}
+            {user && (
+              <ReferralPanel isAuthenticated={true} onCreditsChanged={refreshCredits} />
+            )}
           </div>
         )}
       </main>

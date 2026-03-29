@@ -226,7 +226,7 @@ const Index = () => {
           )}
         </div>
         <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(160 10% 97%) 1px, transparent 0)',
+          backgroundImage: 'radial-gradient(circle at 1px 1px, hsl(210 20% 96%) 1px, transparent 0)',
           backgroundSize: '32px 32px'
         }} />
         <div className="relative mx-auto max-w-4xl px-6 py-20 text-center">
@@ -314,18 +314,18 @@ const Index = () => {
               <ATSScore beforeScore={result.beforeScore} afterScore={result.afterScore} />
             </div>
 
-            <ResultSection number="01" title="Industry Translator Key" delay={0.1}>
+            <ResultSection number="01" title="Domain Alignment Key" delay={0.1}>
               <TranslatorTable entries={result.translatorTable} />
             </ResultSection>
 
-            <ResultSection number="02" title="Before → After Comparison" delay={0.2}>
+            <ResultSection number="02" title="Re-Engineered Bullets" delay={0.2}>
               <ComparisonSlider
                 originalBullets={result.originalBullets || []}
                 tunedBullets={result.tunedBullets || []}
               />
             </ResultSection>
 
-            <ResultSection number="03" title="Your Refined Resume" delay={0.25}>
+            <ResultSection number="03" title="Your Aligned Resume" delay={0.25}>
               {result.titleChanges && result.titleChanges.length > 0 && (
                 <div className="mb-4 rounded-lg border border-secondary/30 bg-secondary/5 p-4 space-y-2">
                   <p className="font-mono text-xs uppercase tracking-wider text-secondary font-semibold">Suggested Title Updates</p>

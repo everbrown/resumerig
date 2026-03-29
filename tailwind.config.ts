@@ -14,9 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['"Instrument Serif"', 'serif'],
-        body: ['Inter', 'sans-serif'],
-        mono: ['"Geist Mono"', 'monospace'],
+        display: ['"Roboto Condensed"', 'sans-serif'],
+        body: ['Roboto', 'sans-serif'],
+        mono: ['"Roboto Mono"', 'monospace'],
       },
       fontSize: {
         'xs': ['0.64rem', { lineHeight: '1.4' }],

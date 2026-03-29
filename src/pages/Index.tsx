@@ -216,6 +216,7 @@ const Index = () => {
             onChange={setResume}
             icon={<FileText className="h-5 w-5" />}
             allowFileUpload
+            autoExpand
           />
           <ResumeInput
             label="Target Job Description"

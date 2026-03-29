@@ -64,8 +64,18 @@ serve(async (req) => {
     if (isPdf && !mimeType.includes("pdf")) mimeType = "application/pdf";
     if (isDoc && !mimeType.includes("word")) mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-    const extractPrompt =
-      "Extract all resume text exactly as written. Preserve original company names, university/school names, degree names, dates, headings, bullet points, and line breaks. Do NOT paraphrase, normalize, spell-correct, or expand abbreviations. Return plain text only.";
+    const extractPrompt = `First, visually analyze the layout of this resume. Pay close attention to how information is spatially grouped — job titles, company names, locations, and dates often appear on the same visual line or row even if they are in different columns (e.g. left-aligned title with right-aligned dates).
+
+Then extract all text following these rules:
+- For each job/position entry, combine the job title, company name, location, AND dates onto ONE line separated by " | ". Example: "Senior Project Manager | Acme Corp, New York, NY | Jan 2020 - Present"
+- For each education entry, combine degree, school, AND date onto ONE line separated by " | ". Example: "B.S. in Biology | State University | May 2019"
+- NEVER put dates on their own separate line. Dates MUST stay attached to the job or education entry they belong to.
+- If dates appear in a right-aligned column on the same row as a job title, merge them onto one line.
+- Preserve all bullet points exactly as written (use "• " prefix).
+- Preserve section headings (EXPERIENCE, EDUCATION, SKILLS, etc.).
+- Do NOT paraphrase, normalize, spell-correct, or expand abbreviations.
+- Do NOT invent or reorder information.
+- Return plain text only.`;
 
     // Build multimodal message with base64 file
     const userContent: any[] = [

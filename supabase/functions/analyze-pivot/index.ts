@@ -24,6 +24,16 @@ CRITICAL RULES:
 - The tunedResume must keep every original workplace, institution, degree, certification, and date exactly as they appear in the source resume.
 - You MAY suggest improved job titles that better align with the target JD's language. When you do, return the original and suggested title in the titleChanges array. In the tunedResume text itself, use the ORIGINAL title — the UI will handle displaying both.
 
+FORMATTING RULES FOR tunedResume:
+- Use clear section headings in ALL CAPS on their own line (e.g. SUMMARY, EXPERIENCE, EDUCATION, SKILLS, CERTIFICATIONS).
+- Add a blank line before each section heading.
+- For each job entry, put the job title, company, location, AND dates on the SAME line, separated by " | " (pipe). Example: "Senior Project Manager | Acme Corp, New York, NY | Jan 2020 - Present"
+- For each education entry, put the degree, school, AND date on the SAME line, separated by " | ". Example: "B.S. Computer Science | MIT | May 2019"
+- Start each bullet point with "• " (bullet character + space).
+- Group bullets directly under their parent job/education entry with no blank lines between bullets.
+- Add a blank line between different job entries or education entries.
+- NEVER list dates on separate lines disconnected from their related job or school.
+
 IMPORTANT: You MUST respond by calling the provided function tool. Do NOT return plain text.`;
 
 const normalizeForMatch = (value: string) =>

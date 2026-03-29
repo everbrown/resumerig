@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ResumeDisplay from "@/components/ResumeDisplay";
 import { motion } from "framer-motion";
 import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut, Copy, Download, Check, FileDown } from "lucide-react";
 import { toast } from "sonner";
@@ -280,9 +281,7 @@ const Index = () => {
                   ))}
                 </div>
               )}
-              <div className="font-body text-foreground leading-relaxed whitespace-pre-wrap">
-                {result.tunedResume}
-              </div>
+              <ResumeDisplay text={result.tunedResume} />
               <div className="flex gap-3 mt-4 pt-4 border-t border-border">
                 <Button
                   size="sm"

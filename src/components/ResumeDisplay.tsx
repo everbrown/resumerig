@@ -92,10 +92,10 @@ const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
               }
               if (item.type === "bullet") {
                 return (
-                  <p key={ii} className="font-body text-sm text-foreground/85 pl-4 relative leading-relaxed">
-                    <span className="absolute left-0 text-secondary">•</span>
-                    {item.content}
-                  </p>
+                  <div key={ii} className="flex gap-1.5 leading-relaxed">
+                    <span className="text-secondary text-sm shrink-0 mt-px">•</span>
+                    <p className="font-body text-sm text-foreground/85">{item.content}</p>
+                  </div>
                 );
               }
               return (

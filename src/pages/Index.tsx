@@ -118,10 +118,11 @@ const Index = () => {
       return;
     }
 
-    if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
-      setShowPaywall(true);
-      return;
-    }
+    // TESTING: credit check bypassed
+    // if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
+    //   setShowPaywall(true);
+    //   return;
+    // }
 
     setLoading(true);
     setError("");

@@ -255,20 +255,22 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
         y = margin;
       }
 
-      // Draw heading text
+      // Draw heading text — jsPDF y is the text BASELINE
       pdf.setFontSize(headingFontSize);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(43, 92, 63);
       pdf.text(section.heading, margin, y);
       
-      // Draw underline BELOW the heading text baseline
-      const underlineY = y + 3;
+      // Underline needs to clear descenders (g, p, y etc.)
+      // headingFontSize descender ≈ fontSize * 0.3, plus buffer
+      const descenderClearance = headingFontSize * 0.35;
+      const underlineY = y + descenderClearance;
       pdf.setDrawColor(43, 92, 63);
-      pdf.setLineWidth(0.6);
+      pdf.setLineWidth(0.5);
       pdf.line(margin, underlineY, pageWidth - margin, underlineY);
       
-      // Advance y past heading + underline gap
-      y = underlineY + headingUnderGap + 2;
+      // Add buffer between underline and next content
+      y = underlineY + headingFontSize * 0.5;
     }
 
     for (const line of section.lines) {

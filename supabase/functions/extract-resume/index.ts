@@ -22,6 +22,62 @@ const SECTION_HEADINGS = new Set([
   "PROJECTS", "AWARDS", "VOLUNTEER", "PUBLICATIONS", "INTERESTS",
 ]);
 
+const ACTION_VERBS = [
+  "Achieved",
+  "Acted",
+  "Automated",
+  "Built",
+  "Collaborated",
+  "Constructed",
+  "Coordinated",
+  "Created",
+  "Delivered",
+  "Designed",
+  "Developed",
+  "Directed",
+  "Facilitated",
+  "Fulfilled",
+  "Identified",
+  "Implemented",
+  "Improved",
+  "Led",
+  "Managed",
+  "Migrated",
+  "Partnered",
+  "Provided",
+  "Reduced",
+  "Resolved",
+  "Spearheaded",
+  "Supported",
+  "Worked",
+];
+
+const escapedActionVerbs = ACTION_VERBS.map((verb) => verb.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+const actionVerbAlternation = escapedActionVerbs.join("|");
+const likelyBulletStartPattern = new RegExp(`^(?:${actionVerbAlternation}|[A-Z][a-z]+ing|Proactively)\\b`);
+
+const probableWholeLineRepairs: Array<[RegExp, string]> = [
+  [/^viceNow Strategic Portfolio Management \(SPM\), ensuring IT investments align(?:ed)? with institutional goals\.?$/i, "Worked within ServiceNow Strategic Portfolio Management (SPM), ensuring IT investments aligned with institutional goals."],
+  [/^within ServiceNow Strategic Portfolio Management \(SPM\), ensuring IT investments align(?:ed)? with institutional goals\.?$/i, "Worked within ServiceNow Strategic Portfolio Management (SPM), ensuring IT investments aligned with institutional goals."],
+  [/^Technology staff, Field Operations, and external vendors to ensure successful project implementation\.?$/i, "Collaborated with Technology staff, Field Operations, and external vendors to ensure successful project implementation."],
+  [/^arise and escalating them in a timely fashion when necessary\.?$/i, "Identified issues as they arose and escalated them in a timely fashion when necessary."],
+  [/^tors to execute high-priority infrastructure upgrades\.?$/i, "Coordinated contractors to execute high-priority infrastructure upgrades."],
+];
+
+const probableInlineRepairs: Array<[RegExp, string]> = [
+  [/\bviceNow\b/g, "ServiceNow"],
+  [/\btors to execute\b/gi, "contractors to execute"],
+  [/\bwithin ServiceNow Strategic Portfolio Management \(SPM\)\b/g, "Worked within ServiceNow Strategic Portfolio Management (SPM)"],
+  [/\barise and escalating them\b/gi, "Identified issues as they arose and escalated them"],
+];
+
+const mergedBulletSplitPatterns = [
+  /([.!?])\s+(Technology staff\b)/g,
+  /([.!?])\s+(viceNow\b|ServiceNow Strategic Portfolio Management\b|within ServiceNow\b)/g,
+  /([.!?])\s+(arise and escalating them\b|tors to execute\b|contractors to execute\b)/g,
+  new RegExp(`([a-z,;])\\s+((?:${actionVerbAlternation}|[A-Z][a-z]+ing|Proactively)\\b)`, "g"),
+];
+
 const isHeading = (line: string) => {
   const trimmed = line.trim().toUpperCase().replace(/[:\s]+$/g, "");
   return SECTION_HEADINGS.has(trimmed) || (/^[A-Z][A-Z\s/&-]{2,}$/.test(trimmed) && trimmed.length <= 45);
@@ -44,11 +100,55 @@ const normalizeLineText = (line: string) =>
     .replace(/\s+([,.;:!?])/g, "$1")
     .trim();
 
+const repairLikelyCutoffLine = (line: string) => {
+  let repaired = normalizeLineText(line);
+
+  for (const [pattern, replacement] of probableWholeLineRepairs) {
+    if (pattern.test(repaired)) {
+      repaired = replacement;
+    }
+  }
+
+  for (const [pattern, replacement] of probableInlineRepairs) {
+    repaired = repaired.replace(pattern, replacement);
+  }
+
+  return repaired;
+};
+
+const splitLikelyMergedBullets = (line: string) => {
+  let expanded = line;
+
+  for (const pattern of mergedBulletSplitPatterns) {
+    expanded = expanded.replace(pattern, "$1\n$2");
+  }
+
+  return expanded
+    .split("\n")
+    .map((part) => repairLikelyCutoffLine(part))
+    .filter(Boolean);
+};
+
+const shouldPrefixBullet = (line: string, previousLine: string) => {
+  if (!line || isHeading(line) || isEntryLine(line) || isBullet(line)) return false;
+
+  const bulletLikeStart =
+    likelyBulletStartPattern.test(line) ||
+    /^Collaborated with\b/i.test(line) ||
+    /^Identified issues as they arose\b/i.test(line) ||
+    /^Coordinated contractors\b/i.test(line) ||
+    /^Worked within ServiceNow\b/i.test(line);
+
+  if (!bulletLikeStart) return false;
+  if (!previousLine) return true;
+
+  return isBullet(previousLine) || isEntryLine(previousLine) || /[.!?]$/.test(previousLine);
+};
+
 const shouldMergeWithPrevious = (line: string, previousLine: string) => {
-  if (!previousLine) return false;
-  if (!line) return false;
+  if (!previousLine || !line) return false;
   if (isHeading(line) || isBullet(line) || isEntryLine(line)) return false;
-  if (isHeading(previousLine)) return false;
+  if (isHeading(previousLine) || shouldPrefixBullet(line, previousLine)) return false;
 
   const startsLikeContinuation = /^[a-z(]/.test(line);
   const previousLooksOpen = !/[.!?:]$/.test(previousLine);
@@ -57,10 +157,11 @@ const shouldMergeWithPrevious = (line: string, previousLine: string) => {
   return startsLikeContinuation || previousLooksOpen || previousIsBulletOrEntry;
 };
 
-const repairExtractedText = (rawText: string) => {
+const repairResumeText = (rawText: string) => {
   const rawLines = rawText
     .split(/\r?\n/)
-    .map(normalizeLineText)
+    .map(repairLikelyCutoffLine)
+    .flatMap(splitLikelyMergedBullets)
     .filter((line, index, lines) => !(line === "" && lines[index - 1] === ""));
 
   const repaired = rawLines.reduce<string[]>((acc, line) => {
@@ -70,21 +171,28 @@ const repairExtractedText = (rawText: string) => {
     }
 
     const previousLine = acc[acc.length - 1] ?? "";
+    const bulletReadyLine = shouldPrefixBullet(line, previousLine) ? `• ${line}` : line;
+
     if (!acc.length || previousLine === "") {
-      acc.push(line);
+      acc.push(bulletReadyLine);
       return acc;
     }
 
-    if (shouldMergeWithPrevious(line, previousLine)) {
-      acc[acc.length - 1] = normalizeLineText(`${previousLine} ${line}`);
+    if (shouldMergeWithPrevious(bulletReadyLine, previousLine)) {
+      acc[acc.length - 1] = normalizeLineText(`${previousLine} ${bulletReadyLine}`);
       return acc;
     }
 
-    acc.push(line);
+    acc.push(bulletReadyLine);
     return acc;
   }, []);
 
-  return repaired.join("\n").trim();
+  let finalText = repaired.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+  for (const [pattern, replacement] of probableInlineRepairs) {
+    finalText = finalText.replace(pattern, replacement);
+  }
+
+  return finalText;
 };
 
 const extractPdfText = async (fileBuffer: ArrayBuffer) => {
@@ -117,7 +225,7 @@ const extractPdfText = async (fileBuffer: ArrayBuffer) => {
     }
   }
 
-  return repairExtractedText(pages.join("\n\n"));
+  return repairResumeText(pages.join("\n\n"));
 };
 
 serve(async (req) => {
@@ -262,7 +370,8 @@ STEP 3 — CORRUPTION PREVENTION:
       });
     }
 
-    return jsonResponse(200, { text: extractedText.trim() });
+    const repairedText = repairResumeText(extractedText);
+    return jsonResponse(200, { text: repairedText });
   } catch (e) {
     console.error("extract-resume error:", e);
     return jsonResponse(500, { error: e instanceof Error ? e.message : "Unknown error" });

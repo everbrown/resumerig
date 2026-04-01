@@ -125,11 +125,10 @@ const Index = () => {
       return;
     }
 
-    // TESTING: credit check bypassed
-    // if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
-    //   setShowPaywall(true);
-    //   return;
-    // }
+    if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
+      setShowPaywall(true);
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -143,15 +142,14 @@ const Index = () => {
       const targetRole = jobDescription.match(/(?:title|role|position)[:\s]+([^\n,]+)/i)?.[1]?.trim();
       saveToHistory(resume, jobDescription, data, targetRole).catch(console.error);
 
-      // TESTING: credit deduction bypassed
-      // if (!creditStatus.hasUsedFreeCredit) {
-      //   await markFreeCreditUsed();
-      //   setCreditStatus((prev) => ({ ...prev, hasUsedFreeCredit: true }));
-      // } else {
-      //   const { deductCredit } = await import("@/lib/credits");
-      //   await deductCredit();
-      //   setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
-      // }
+      if (!creditStatus.hasUsedFreeCredit) {
+        await markFreeCreditUsed();
+        setCreditStatus((prev) => ({ ...prev, hasUsedFreeCredit: true }));
+      } else {
+        const { deductCredit } = await import("@/lib/credits");
+        await deductCredit();
+        setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
+      }
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
       setError(msg);
@@ -164,11 +162,10 @@ const Index = () => {
   const handleOutreach = async () => {
     if (!result) return;
 
-    // TESTING: credit check bypassed
-    // if (creditStatus.balance <= 0) {
-    //   setShowPaywall(true);
-    //   return;
-    // }
+    if (creditStatus.balance <= 0) {
+      setShowPaywall(true);
+      return;
+    }
 
     setOutreachLoading(true);
     setOutreachResult(null);

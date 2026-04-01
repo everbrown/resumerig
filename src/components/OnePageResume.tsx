@@ -32,11 +32,10 @@ const OnePageResume = ({
   const [copied, setCopied] = useState(false);
 
   const handleCondense = async () => {
-    // TESTING: credit check bypassed
-    // if (!hasCredits) {
-    //   onCreditsNeeded();
-    //   return;
-    // }
+    if (!hasCredits) {
+      onCreditsNeeded();
+      return;
+    }
 
     setLoading(true);
     try {
@@ -49,7 +48,7 @@ const OnePageResume = ({
 
       setResult(data as CondensedResult);
       toast.success("One-page resume generated!");
-      // onCreditUsed(); // TESTING: bypassed
+      onCreditUsed();
     } catch (err: any) {
       const msg = err?.message || "Failed to condense resume.";
       if (msg.includes("No credits")) {

@@ -22,6 +22,7 @@ import BeforeAfterShowcase from "@/components/BeforeAfterShowcase";
 import ATSScore from "@/components/ATSScore";
 import CoverLetterPanel from "@/components/CoverLetterPanel";
 import ReferralPanel from "@/components/ReferralPanel";
+import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";

@@ -119,6 +119,11 @@ const Index = () => {
       return;
     }
 
+    if (needsReview) {
+      toast.warning("Please review the extracted text first and click 'Text looks good' before proceeding.");
+      return;
+    }
+
     // TESTING: credit check bypassed
     // if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
     //   setShowPaywall(true);

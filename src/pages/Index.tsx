@@ -426,7 +426,7 @@ const Index = () => {
             </ResultSection>
 
             {/* Cover Letter Generator */}
-            <ResultSection number="05" title="Cover Letter Generator" delay={0.33}>
+            <ResultSection number="06" title="Cover Letter Generator" delay={0.33}>
               <CoverLetterPanel
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}

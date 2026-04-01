@@ -438,7 +438,7 @@ const Index = () => {
             </ResultSection>
 
             {/* Outreach Section */}
-            <ResultSection number="06" title="Outreach Message Generator" delay={0.35}>
+            <ResultSection number="07" title="Outreach Message Generator" delay={0.35}>
               {!outreachResult && !outreachLoading && (
                 <div className="text-center space-y-4">
                   <p className="font-body text-muted-foreground">

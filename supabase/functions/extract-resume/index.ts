@@ -268,11 +268,3 @@ STEP 3 — CORRUPTION PREVENTION:
     return jsonResponse(500, { error: e instanceof Error ? e.message : "Unknown error" });
   }
 });
-    }
-
-    return jsonResponse(200, { text: extractedText.trim() });
-  } catch (e) {
-    console.error("extract-resume error:", e);
-    return jsonResponse(500, { error: e instanceof Error ? e.message : "Unknown error" });
-  }
-});

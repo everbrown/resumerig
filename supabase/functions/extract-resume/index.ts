@@ -195,6 +195,13 @@ const repairResumeText = (rawText: string) => {
   return finalText;
 };
 
+const bucketY = (y: number, existingKeys: number[], threshold = 3): number => {
+  for (const key of existingKeys) {
+    if (Math.abs(y - key) <= threshold) return key;
+  }
+  return y;
+};
+
 const extractPdfText = async (fileBuffer: ArrayBuffer) => {
   const pdf = await getDocument({ data: new Uint8Array(fileBuffer), useSystemFonts: true }).promise;
   const pages: string[] = [];
@@ -209,19 +216,44 @@ const extractPdfText = async (fileBuffer: ArrayBuffer) => {
       if (!text) continue;
 
       const x = Math.round(item?.transform?.[4] ?? 0);
-      const y = Math.round(item?.transform?.[5] ?? 0);
+      const rawY = Math.round(item?.transform?.[5] ?? 0);
+      const y = bucketY(rawY, [...rows.keys()]);
       const existing = rows.get(y) ?? [];
       existing.push({ x, text });
       rows.set(y, existing);
     }
 
-    const pageLines = [...rows.entries()]
-      .sort((a, b) => b[0] - a[0])
-      .map(([, tokens]) => normalizeLineText(tokens.sort((a, b) => a.x - b.x).map((token) => token.text).join(" ")))
-      .filter(Boolean);
+    const sortedRows = [...rows.entries()].sort((a, b) => b[0] - a[0]);
 
-    if (pageLines.length > 0) {
-      pages.push(pageLines.join("\n"));
+    // Build lines, then stitch rows that end mid-word onto the next row
+    const rawPageLines: string[] = sortedRows.map(([, tokens]) =>
+      normalizeLineText(tokens.sort((a, b) => a.x - b.x).map((t) => t.text).join(" "))
+    ).filter(Boolean);
+
+    // Stitch: if a line ends with a lowercase fragment (no space/period) and
+    // the next line starts with a lowercase letter, join them
+    const stitched = rawPageLines.reduce<string[]>((acc, line) => {
+      if (!acc.length) { acc.push(line); return acc; }
+
+      const prev = acc[acc.length - 1];
+      // Detect partial word at end: line ends with lowercase letters, no punctuation
+      const prevEndsPartial = /[a-z]$/.test(prev) && !/[.!?:;,)\]]$/.test(prev);
+      const lineStartsLower = /^[a-z]/.test(line);
+
+      if (prevEndsPartial && lineStartsLower) {
+        // Join WITHOUT space — the word was split (e.g., "Ser" + "viceNow" → "ServiceNow")
+        acc[acc.length - 1] = prev + line;
+      } else if (prevEndsPartial && /^[A-Z]/.test(line)) {
+        // Line ends without punctuation but next starts uppercase — likely a wrap, join with space
+        acc[acc.length - 1] = normalizeLineText(`${prev} ${line}`);
+      } else {
+        acc.push(line);
+      }
+      return acc;
+    }, []);
+
+    if (stitched.length > 0) {
+      pages.push(stitched.join("\n"));
     }
   }
 

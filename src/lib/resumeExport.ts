@@ -64,6 +64,41 @@ function cleanBullet(line: string): string {
   return line.replace(/^\s*[•\-\*▪]\s*/, "").replace(/^\s*\d+[\.\)]\s*/, "").trim();
 }
 
+/**
+ * Sanitize text for jsPDF (Helvetica only supports basic Latin).
+ * - Replace unsupported Unicode separators/diamonds with " | "
+ * - Shorten long URLs (strip protocol, trailing slashes)
+ * - Replace smart quotes, em/en dashes with ASCII equivalents
+ */
+function sanitizeForPdf(text: string): string {
+  let s = text;
+  // Replace common Unicode separators that render as garbled "A" in Helvetica
+  s = s.replace(/[\u00C4\u2022\u25C6\u25CF\u2666\u00B7\u2043\u25AA\u25AB\u25E6\u2219\u00A4\u2023]/g, "|");
+  // Replace diamond/separator patterns like "Ä" used as delimiters
+  s = s.replace(/\s*[""]\s*/g, " | ");
+  // Smart quotes to ASCII
+  s = s.replace(/[\u2018\u2019\u201A]/g, "'");
+  s = s.replace(/[\u201C\u201D\u201E]/g, '"');
+  // Em/en dashes
+  s = s.replace(/[\u2013\u2014]/g, "-");
+  // Ellipsis
+  s = s.replace(/\u2026/g, "...");
+  // Clean up any remaining non-ASCII that Helvetica can't render (preserve accented Latin)
+  s = s.replace(/[^\x00-\x7F\u00C0-\u00FF]/g, (ch) => {
+    // Keep standard accented Latin characters, replace everything else
+    return " ";
+  });
+  // Clean up multiple pipes/spaces
+  s = s.replace(/\s*\|\s*\|\s*/g, " | ");
+  s = s.replace(/\s{2,}/g, " ");
+  
+  // Shorten long URLs: strip protocol and trailing slash
+  s = s.replace(/https?:\/\/(www\.)?/g, "");
+  s = s.replace(/\/+(\s|$)/g, "$1");
+  
+  return s.trim();
+}
+
 export async function downloadAsDocx(resumeText: string): Promise<void> {
   const sections = parseResumeSections(resumeText);
 

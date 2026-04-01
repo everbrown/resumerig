@@ -95,9 +95,9 @@ const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
                     <div key={ii} className="flex items-start gap-2 overflow-visible">
                       <span
                         aria-hidden="true"
-                        className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-secondary"
+                        className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/80"
                       />
-                      <p className="min-w-0 flex-1 break-words font-body text-sm leading-relaxed text-foreground/85">
+                      <p className="min-w-0 flex-1 whitespace-pre-wrap break-words font-body text-sm leading-relaxed text-foreground/85">
                         {item.content}
                       </p>
                     </div>

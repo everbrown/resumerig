@@ -37,6 +37,28 @@ const isEntryLine = (line: string) => {
   return false;
 };
 
+const normalizeResumeLines = (rawText: string) => {
+  const rawLines = rawText.split("\n").map((line) => line.trim());
+
+  return rawLines.reduce<string[]>((acc, line) => {
+    if (!line) {
+      if (acc[acc.length - 1] !== "") acc.push("");
+      return acc;
+    }
+
+    const previousLine = acc[acc.length - 1];
+    const startsNewBlock = isHeading(line) || isBullet(line) || isEntryLine(line);
+
+    if (!acc.length || previousLine === "" || startsNewBlock || isHeading(previousLine)) {
+      acc.push(line);
+      return acc;
+    }
+
+    acc[acc.length - 1] = `${previousLine} ${line}`;
+    return acc;
+  }, []);
+};
+
 const parseLine = (line: string): ParsedLine => {
   const trimmed = line.trim();
   if (!trimmed) return { type: "blank", content: "" };
@@ -48,7 +70,7 @@ const parseLine = (line: string): ParsedLine => {
 
 const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
   const sections = useMemo(() => {
-    const lines = text.split("\n");
+    const lines = normalizeResumeLines(text);
     const parsed = lines.map(parseLine);
 
     // Group into sections

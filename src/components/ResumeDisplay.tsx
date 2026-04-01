@@ -126,7 +126,7 @@ const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
                   );
                 }
               return (
-                <p key={ii} className="font-body text-sm text-foreground/90 leading-relaxed">
+                <p key={ii} className="font-body text-sm text-foreground/90 leading-relaxed break-words" style={{ overflowWrap: 'anywhere' }}>
                   {item.content}
                 </p>
               );

@@ -410,7 +410,18 @@ const Index = () => {
               </div>
             </ResultSection>
 
-            <ResultSection number="04" title="Your Pivot Pitch" delay={0.3}>
+            {/* 1-Page Resume Condenser */}
+            <ResultSection number="04" title="1-Page Resume Generator" delay={0.28}>
+              <OnePageResume
+                tunedResume={result.tunedResume}
+                jobDescription={jobDescription}
+                hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                onCreditsNeeded={() => setShowPaywall(true)}
+                onCreditUsed={refreshCredits}
+              />
+            </ResultSection>
+
+            <ResultSection number="05" title="Your Pivot Pitch" delay={0.3}>
               <PivotPitch pitch={result.pivotPitch} />
             </ResultSection>
 

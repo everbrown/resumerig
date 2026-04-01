@@ -73,7 +73,7 @@ const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
   }, [text]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 overflow-visible">
       {sections.map((section, si) => (
         <div key={si}>
           {section.heading && (
@@ -81,7 +81,7 @@ const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
               {section.heading}
             </h3>
           )}
-          <div className="space-y-1">
+          <div className="space-y-1 overflow-visible">
             {section.items.map((item, ii) => {
               if (item.type === "entry") {
                 return (
@@ -90,14 +90,19 @@ const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
                   </p>
                 );
               }
-              if (item.type === "bullet") {
-                return (
-                  <div key={ii} className="flex gap-1.5 leading-relaxed">
-                    <span className="text-secondary text-sm shrink-0 mt-px">•</span>
-                    <p className="font-body text-sm text-foreground/85">{item.content}</p>
-                  </div>
-                );
-              }
+                if (item.type === "bullet") {
+                  return (
+                    <div key={ii} className="flex items-start gap-2 overflow-visible">
+                      <span
+                        aria-hidden="true"
+                        className="mt-[0.45rem] h-1.5 w-1.5 shrink-0 rounded-full bg-secondary"
+                      />
+                      <p className="min-w-0 flex-1 break-words font-body text-sm leading-relaxed text-foreground/85">
+                        {item.content}
+                      </p>
+                    </div>
+                  );
+                }
               return (
                 <p key={ii} className="font-body text-sm text-foreground/90 leading-relaxed">
                   {item.content}

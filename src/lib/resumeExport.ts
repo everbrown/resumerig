@@ -255,13 +255,20 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
         y = margin;
       }
 
-      addText(section.heading, { fontSize: headingFontSize, bold: true, color: [43, 92, 63] });
-
-      // Underline
+      // Draw heading text
+      pdf.setFontSize(headingFontSize);
+      pdf.setFont("helvetica", "bold");
+      pdf.setTextColor(43, 92, 63);
+      pdf.text(section.heading, margin, y);
+      
+      // Draw underline BELOW the heading text baseline
+      const underlineY = y + 3;
       pdf.setDrawColor(43, 92, 63);
-      pdf.setLineWidth(0.8);
-      pdf.line(margin, y - 2, pageWidth - margin, y - 2);
-      y += headingUnderGap;
+      pdf.setLineWidth(0.6);
+      pdf.line(margin, underlineY, pageWidth - margin, underlineY);
+      
+      // Advance y past heading + underline gap
+      y = underlineY + headingUnderGap + 2;
     }
 
     for (const line of section.lines) {

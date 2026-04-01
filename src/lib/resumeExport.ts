@@ -261,16 +261,15 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
       pdf.setTextColor(43, 92, 63);
       pdf.text(section.heading, margin, y);
       
-      // Underline needs to clear descenders (g, p, y etc.)
-      // headingFontSize descender ≈ fontSize * 0.3, plus buffer
-      const descenderClearance = headingFontSize * 0.35;
-      const underlineY = y + descenderClearance;
+      // Underline well below descenders
+      const underlineY = y + headingFontSize * 0.55;
       pdf.setDrawColor(43, 92, 63);
       pdf.setLineWidth(0.5);
       pdf.line(margin, underlineY, pageWidth - margin, underlineY);
       
-      // Add buffer between underline and next content
-      y = underlineY + headingFontSize * 0.5;
+      // 2 full line-heights of gap after the rule so text never touches it
+      const bodyLineHeight = baseFontSize * lineSpacing;
+      y = underlineY + bodyLineHeight * 2;
     }
 
     for (const line of section.lines) {

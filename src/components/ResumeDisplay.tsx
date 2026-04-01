@@ -107,7 +107,7 @@ const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
             {section.items.map((item, ii) => {
               if (item.type === "entry") {
                 return (
-                  <p key={ii} className="font-body text-sm font-semibold text-foreground mt-3 first:mt-0">
+                  <p key={ii} className="font-body text-sm font-semibold text-foreground mt-3 first:mt-0 break-words" style={{ overflowWrap: 'anywhere' }}>
                     {item.content}
                   </p>
                 );
@@ -126,7 +126,7 @@ const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
                   );
                 }
               return (
-                <p key={ii} className="font-body text-sm text-foreground/90 leading-relaxed">
+                <p key={ii} className="font-body text-sm text-foreground/90 leading-relaxed break-words" style={{ overflowWrap: 'anywhere' }}>
                   {item.content}
                 </p>
               );

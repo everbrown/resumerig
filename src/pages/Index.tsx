@@ -42,6 +42,7 @@ const Index = () => {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [needsReview, setNeedsReview] = useState(false);
   const [creditStatus, setCreditStatus] = useState<CreditStatus>({
     hasUsedFreeCredit: false,
     balance: 0,
@@ -115,6 +116,11 @@ const Index = () => {
   const handleAnalyze = async () => {
     if (!user) {
       navigate("/auth");
+      return;
+    }
+
+    if (needsReview) {
+      toast.warning("Please review the extracted text first and click 'Text looks good' before proceeding.");
       return;
     }
 
@@ -271,10 +277,22 @@ const Index = () => {
             sublabel="Paste or upload your resume"
             placeholder="Paste your full resume here — or click Upload File to extract from PDF, Word, or image..."
             value={resume}
-            onChange={setResume}
+            onChange={(val) => {
+              setResume(val);
+              // If the value is being set from extraction (long text appearing at once),
+              // we flag it for review. Manual typing won't trigger this.
+              if (val.length > 200 && resume.length < 50) {
+                setNeedsReview(true);
+              }
+            }}
             icon={<FileText className="h-5 w-5" />}
             allowFileUpload
             autoExpand
+            needsReview={needsReview}
+            onReviewConfirmed={() => {
+              setNeedsReview(false);
+              toast.success("Great — you're ready to transform!");
+            }}
           />
           <ResumeInput
             label="Target Job Description"

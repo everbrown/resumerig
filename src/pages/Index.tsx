@@ -246,8 +246,7 @@ const Index = () => {
               The Hardest Part of a Career Pivot Isn't the Work—It's the Translation.
             </p>
             <p className="mt-4 font-body text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
-               Switching industries? Your experience doesn't translate — and recruiters won't do it for you. ResumeRig <em className="text-primary-foreground not-italic font-medium">identifies your target domain</em> and
-               re-engineers every bullet to speak its language, bridging the gap so your resume lands instead of getting filtered out.
+               Your experience is elite, but recruiters won't connect the dots for you. Stop letting ATS filters ignore your potential. Resume Rig <em className="text-primary-foreground not-italic font-medium">identifies your target domain</em> and hard-codes your professional data to speak its language.
             </p>
           </motion.div>
         </div>

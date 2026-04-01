@@ -306,9 +306,11 @@ serve(async (req) => {
     if (isPdf) {
       try {
         const extractedPdfText = await extractPdfText(fileBuffer);
+        console.log("PDF extraction result (first 1000 chars):", extractedPdfText.slice(0, 1000));
         if (extractedPdfText.trim().length >= 40) {
           return jsonResponse(200, { text: extractedPdfText });
         }
+        console.warn("PDF extraction too short, falling back to AI");
       } catch (pdfError) {
         console.error("Deterministic PDF extraction failed, falling back to AI:", pdfError);
       }

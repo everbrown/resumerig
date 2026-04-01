@@ -195,69 +195,66 @@ const repairResumeText = (rawText: string) => {
   return finalText;
 };
 
-const bucketY = (y: number, existingKeys: number[], threshold = 3): number => {
-  for (const key of existingKeys) {
-    if (Math.abs(y - key) <= threshold) return key;
-  }
-  return y;
-};
-
 const extractPdfText = async (fileBuffer: ArrayBuffer) => {
   const pdf = await getDocument({ data: new Uint8Array(fileBuffer), useSystemFonts: true }).promise;
-  const pages: string[] = [];
+  const pageTexts: string[] = [];
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     const page = await pdf.getPage(pageNumber);
-    const content = await page.getTextContent();
-    const rows = new Map<number, { x: number; text: string }[]>();
+    const content = await page.getTextContent({ disableCombineTextItems: false });
 
-    for (const item of content.items as Array<{ str?: string; transform?: number[] }>) {
-      const text = normalizeLineText(item?.str ?? "");
-      if (!text) continue;
+    // Walk the raw item stream in order, using position deltas to decide
+    // whether to insert a space, newline, or nothing between fragments.
+    let text = "";
+    let prevX = -1;
+    let prevY = -1;
+    let prevWidth = 0;
 
-      const x = Math.round(item?.transform?.[4] ?? 0);
-      const rawY = Math.round(item?.transform?.[5] ?? 0);
-      const y = bucketY(rawY, [...rows.keys()]);
-      const existing = rows.get(y) ?? [];
-      existing.push({ x, text });
-      rows.set(y, existing);
+    for (const item of content.items as Array<{
+      str?: string;
+      transform?: number[];
+      width?: number;
+    }>) {
+      const s = item.str ?? "";
+      if (!s && !s.trim()) continue;
+
+      const tx = item.transform;
+      const x = tx?.[4] ?? 0;
+      const y = tx?.[5] ?? 0;
+      const w = item.width ?? 0;
+
+      if (prevY !== -1) {
+        const dy = Math.abs(y - prevY);
+        if (dy > 4) {
+          // Different visual line
+          text += "\n";
+        } else {
+          // Same line — decide space vs. no-space
+          const gap = x - (prevX + prevWidth);
+          if (gap > 2) {
+            text += " ";
+          }
+          // If gap <= 2, fragments are adjacent (possibly a split word) — no separator
+        }
+      }
+
+      text += s;
+      prevX = x;
+      prevY = y;
+      prevWidth = w;
     }
 
-    const sortedRows = [...rows.entries()].sort((a, b) => b[0] - a[0]);
+    const cleaned = text
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
 
-    // Build lines, then stitch rows that end mid-word onto the next row
-    const rawPageLines: string[] = sortedRows.map(([, tokens]) =>
-      normalizeLineText(tokens.sort((a, b) => a.x - b.x).map((t) => t.text).join(" "))
-    ).filter(Boolean);
-
-    // Stitch: if a line ends with a lowercase fragment (no space/period) and
-    // the next line starts with a lowercase letter, join them
-    const stitched = rawPageLines.reduce<string[]>((acc, line) => {
-      if (!acc.length) { acc.push(line); return acc; }
-
-      const prev = acc[acc.length - 1];
-      // Detect partial word at end: line ends with lowercase letters, no punctuation
-      const prevEndsPartial = /[a-z]$/.test(prev) && !/[.!?:;,)\]]$/.test(prev);
-      const lineStartsLower = /^[a-z]/.test(line);
-
-      if (prevEndsPartial && lineStartsLower) {
-        // Join WITHOUT space — the word was split (e.g., "Ser" + "viceNow" → "ServiceNow")
-        acc[acc.length - 1] = prev + line;
-      } else if (prevEndsPartial && /^[A-Z]/.test(line)) {
-        // Line ends without punctuation but next starts uppercase — likely a wrap, join with space
-        acc[acc.length - 1] = normalizeLineText(`${prev} ${line}`);
-      } else {
-        acc.push(line);
-      }
-      return acc;
-    }, []);
-
-    if (stitched.length > 0) {
-      pages.push(stitched.join("\n"));
+    if (cleaned.length > 0) {
+      pageTexts.push(cleaned);
     }
   }
 
-  return repairResumeText(pages.join("\n\n"));
+  return repairResumeText(pageTexts.join("\n\n"));
 };
 
 serve(async (req) => {

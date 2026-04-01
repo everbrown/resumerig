@@ -248,7 +248,7 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
   const emptyLineGap = isOnePage ? 3 : 6;
   const headingUnderGap = isOnePage ? 3 : 6;
 
-  const sections = parseResumeSections(resumeText);
+  const sections = parseResumeSections(sanitizeForPdf(resumeText));
 
   const addText = (
     text: string,

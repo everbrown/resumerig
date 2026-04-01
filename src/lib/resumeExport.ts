@@ -189,17 +189,29 @@ export async function downloadAsDocx(resumeText: string): Promise<void> {
   saveAs(blob, "refined-resume.docx");
 }
 
-export function downloadAsPdf(resumeText: string): void {
+export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean }): void {
+  const isOnePage = options?.onePage ?? false;
+  const format = isOnePage ? "a4" : "letter";
+  
   const pdf = new jsPDF({
     unit: "pt",
-    format: "letter",
+    format,
   });
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 54; // 0.75 inch
+  const margin = isOnePage ? 40 : 54; // tighter margins for 1-page
   const maxWidth = pageWidth - margin * 2;
   let y = margin;
+
+  // For one-page mode, use smaller fonts and tighter spacing
+  const baseFontSize = isOnePage ? 9.5 : 11;
+  const headingFontSize = isOnePage ? 11 : 13;
+  const lineSpacing = isOnePage ? 1.25 : 1.4;
+  const sectionGap = isOnePage ? 4 : 8;
+  const bulletGap = isOnePage ? 1 : 2;
+  const emptyLineGap = isOnePage ? 3 : 6;
+  const headingUnderGap = isOnePage ? 3 : 6;
 
   const sections = parseResumeSections(resumeText);
 
@@ -212,47 +224,50 @@ export function downloadAsPdf(resumeText: string): void {
       color?: [number, number, number];
     } = {}
   ) => {
-    const { fontSize = 11, bold = false, indent = 0, color = [30, 30, 30] } = opts;
+    const { fontSize = baseFontSize, bold = false, indent = 0, color = [30, 30, 30] } = opts;
 
     pdf.setFontSize(fontSize);
     pdf.setFont("helvetica", bold ? "bold" : "normal");
     pdf.setTextColor(...color);
 
     const lines = pdf.splitTextToSize(text, maxWidth - indent);
-    const lineHeight = fontSize * 1.4;
+    const lineHeight = fontSize * lineSpacing;
 
     for (const line of lines) {
-      if (y + lineHeight > pageHeight - margin) {
+      if (!isOnePage && y + lineHeight > pageHeight - margin) {
         pdf.addPage();
         y = margin;
       }
-      pdf.text(line, margin + indent, y);
+      // In one-page mode, just keep writing (overflow hidden by design)
+      if (y + lineHeight <= pageHeight - margin) {
+        pdf.text(line, margin + indent, y);
+      }
       y += lineHeight;
     }
   };
 
   for (const section of sections) {
     if (section.heading) {
-      y += 8;
+      y += sectionGap;
 
-      if (y + 30 > pageHeight - margin) {
+      if (!isOnePage && y + 30 > pageHeight - margin) {
         pdf.addPage();
         y = margin;
       }
 
-      addText(section.heading, { fontSize: 13, bold: true, color: [43, 92, 63] });
+      addText(section.heading, { fontSize: headingFontSize, bold: true, color: [43, 92, 63] });
 
       // Underline
       pdf.setDrawColor(43, 92, 63);
       pdf.setLineWidth(0.8);
       pdf.line(margin, y - 2, pageWidth - margin, y - 2);
-      y += 6;
+      y += headingUnderGap;
     }
 
     for (const line of section.lines) {
       const trimmed = line.trim();
       if (!trimmed) {
-        y += 6;
+        y += emptyLineGap;
         continue;
       }
 
@@ -264,9 +279,9 @@ export function downloadAsPdf(resumeText: string): void {
           (/\|/.test(trimmed) || /\d{4}/.test(trimmed));
         addText(trimmed, { bold: isSubheading });
       }
-      y += 2;
+      y += bulletGap;
     }
   }
 
-  pdf.save("refined-resume.pdf");
+  pdf.save(isOnePage ? "one-page-resume.pdf" : "refined-resume.pdf");
 }

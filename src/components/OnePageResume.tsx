@@ -146,7 +146,7 @@ const OnePageResume = ({
           className="gap-2 font-body"
           onClick={() => {
             try {
-              downloadAsPdf(result.condensedResume);
+              downloadAsPdf(result.condensedResume, { onePage: true });
               toast.success("PDF downloaded!");
             } catch {
               toast.error("Failed to generate PDF");

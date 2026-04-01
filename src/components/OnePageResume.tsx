@@ -32,11 +32,10 @@ const OnePageResume = ({
   const [copied, setCopied] = useState(false);
 
   const handleCondense = async () => {
-    // TESTING: credit check bypassed
-    // if (!hasCredits) {
-    //   onCreditsNeeded();
-    //   return;
-    // }
+    if (!hasCredits) {
+      onCreditsNeeded();
+      return;
+    }
 
     setLoading(true);
     try {

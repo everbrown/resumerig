@@ -157,10 +157,11 @@ const Index = () => {
   const handleOutreach = async () => {
     if (!result) return;
 
-    if (creditStatus.balance <= 0) {
-      setShowPaywall(true);
-      return;
-    }
+    // TESTING: credit check bypassed
+    // if (creditStatus.balance <= 0) {
+    //   setShowPaywall(true);
+    //   return;
+    // }
 
     setOutreachLoading(true);
     setOutreachResult(null);

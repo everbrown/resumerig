@@ -42,6 +42,7 @@ const Index = () => {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [needsReview, setNeedsReview] = useState(false);
   const [creditStatus, setCreditStatus] = useState<CreditStatus>({
     hasUsedFreeCredit: false,
     balance: 0,

@@ -22,6 +22,7 @@ import BeforeAfterShowcase from "@/components/BeforeAfterShowcase";
 import ATSScore from "@/components/ATSScore";
 import CoverLetterPanel from "@/components/CoverLetterPanel";
 import ReferralPanel from "@/components/ReferralPanel";
+import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
@@ -409,12 +410,23 @@ const Index = () => {
               </div>
             </ResultSection>
 
-            <ResultSection number="04" title="Your Pivot Pitch" delay={0.3}>
+            {/* 1-Page Resume Condenser */}
+            <ResultSection number="04" title="1-Page Resume Generator" delay={0.28}>
+              <OnePageResume
+                tunedResume={result.tunedResume}
+                jobDescription={jobDescription}
+                hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                onCreditsNeeded={() => setShowPaywall(true)}
+                onCreditUsed={refreshCredits}
+              />
+            </ResultSection>
+
+            <ResultSection number="05" title="Your Pivot Pitch" delay={0.3}>
               <PivotPitch pitch={result.pivotPitch} />
             </ResultSection>
 
             {/* Cover Letter Generator */}
-            <ResultSection number="05" title="Cover Letter Generator" delay={0.33}>
+            <ResultSection number="06" title="Cover Letter Generator" delay={0.33}>
               <CoverLetterPanel
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
@@ -426,7 +438,7 @@ const Index = () => {
             </ResultSection>
 
             {/* Outreach Section */}
-            <ResultSection number="06" title="Outreach Message Generator" delay={0.35}>
+            <ResultSection number="07" title="Outreach Message Generator" delay={0.35}>
               {!outreachResult && !outreachLoading && (
                 <div className="text-center space-y-4">
                   <p className="font-body text-muted-foreground">

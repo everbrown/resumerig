@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getDocument } from "npm:pdfjs-dist@4.10.38/legacy/build/pdf.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +12,113 @@ const jsonResponse = (status: number, body: Record<string, unknown>) =>
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+
+const SECTION_HEADINGS = new Set([
+  "SUMMARY", "PROFESSIONAL SUMMARY", "OBJECTIVE",
+  "EXPERIENCE", "PROFESSIONAL EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT HISTORY", "RELEVANT EXPERIENCE",
+  "EDUCATION", "ACADEMIC BACKGROUND", "EDUCATIONAL BACKGROUND",
+  "SKILLS", "TECHNICAL SKILLS", "CORE COMPETENCIES", "KEY SKILLS",
+  "CERTIFICATIONS", "CERTIFICATES", "LICENSES",
+  "PROJECTS", "AWARDS", "VOLUNTEER", "PUBLICATIONS", "INTERESTS",
+]);
+
+const isHeading = (line: string) => {
+  const trimmed = line.trim().toUpperCase().replace(/[:\s]+$/g, "");
+  return SECTION_HEADINGS.has(trimmed) || (/^[A-Z][A-Z\s/&-]{2,}$/.test(trimmed) && trimmed.length <= 45);
+};
+
+const isBullet = (line: string) => /^\s*(?:[-*•▪●]|\d+[.)])\s+/.test(line);
+
+const isEntryLine = (line: string) => {
+  const trimmed = line.trim();
+  if (trimmed.includes("|") && trimmed.length > 10) return true;
+  if (/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)\s+\d{4}/i.test(trimmed)) return true;
+  if (/\b\d{4}\s*[-–—]\s*(?:\d{4}|present|current)\b/i.test(trimmed)) return true;
+  return false;
+};
+
+const normalizeLineText = (line: string) =>
+  line
+    .replace(/[\u00A0\t]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .trim();
+
+const shouldMergeWithPrevious = (line: string, previousLine: string) => {
+  if (!previousLine) return false;
+  if (!line) return false;
+  if (isHeading(line) || isBullet(line) || isEntryLine(line)) return false;
+  if (isHeading(previousLine)) return false;
+
+  const startsLikeContinuation = /^[a-z(]/.test(line);
+  const previousLooksOpen = !/[.!?:]$/.test(previousLine);
+  const previousIsBulletOrEntry = isBullet(previousLine) || isEntryLine(previousLine);
+
+  return startsLikeContinuation || previousLooksOpen || previousIsBulletOrEntry;
+};
+
+const repairExtractedText = (rawText: string) => {
+  const rawLines = rawText
+    .split(/\r?\n/)
+    .map(normalizeLineText)
+    .filter((line, index, lines) => !(line === "" && lines[index - 1] === ""));
+
+  const repaired = rawLines.reduce<string[]>((acc, line) => {
+    if (!line) {
+      if (acc[acc.length - 1] !== "") acc.push("");
+      return acc;
+    }
+
+    const previousLine = acc[acc.length - 1] ?? "";
+    if (!acc.length || previousLine === "") {
+      acc.push(line);
+      return acc;
+    }
+
+    if (shouldMergeWithPrevious(line, previousLine)) {
+      acc[acc.length - 1] = normalizeLineText(`${previousLine} ${line}`);
+      return acc;
+    }
+
+    acc.push(line);
+    return acc;
+  }, []);
+
+  return repaired.join("\n").trim();
+};
+
+const extractPdfText = async (fileBuffer: ArrayBuffer) => {
+  const pdf = await getDocument({ data: new Uint8Array(fileBuffer), useSystemFonts: true }).promise;
+  const pages: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const rows = new Map<number, { x: number; text: string }[]>();
+
+    for (const item of content.items as Array<{ str?: string; transform?: number[] }>) {
+      const text = normalizeLineText(item?.str ?? "");
+      if (!text) continue;
+
+      const x = Math.round(item?.transform?.[4] ?? 0);
+      const y = Math.round(item?.transform?.[5] ?? 0);
+      const existing = rows.get(y) ?? [];
+      existing.push({ x, text });
+      rows.set(y, existing);
+    }
+
+    const pageLines = [...rows.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([, tokens]) => normalizeLineText(tokens.sort((a, b) => a.x - b.x).map((token) => token.text).join(" ")))
+      .filter(Boolean);
+
+    if (pageLines.length > 0) {
+      pages.push(pageLines.join("\n"));
+    }
+  }
+
+  return repairExtractedText(pages.join("\n\n"));
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -53,13 +161,23 @@ serve(async (req) => {
       });
     }
 
-    // Convert file to base64
     const fileBuffer = await file.arrayBuffer();
+
+    if (isPdf) {
+      try {
+        const extractedPdfText = await extractPdfText(fileBuffer);
+        if (extractedPdfText.trim().length >= 40) {
+          return jsonResponse(200, { text: extractedPdfText });
+        }
+      } catch (pdfError) {
+        console.error("Deterministic PDF extraction failed, falling back to AI:", pdfError);
+      }
+    }
+
     const base64 = btoa(
       new Uint8Array(fileBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
     );
 
-    // Determine MIME type
     let mimeType = file.type || "application/octet-stream";
     if (isPdf && !mimeType.includes("pdf")) mimeType = "application/pdf";
     if (isDoc && !mimeType.includes("word")) mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
@@ -90,7 +208,6 @@ STEP 3 — CORRUPTION PREVENTION:
 - Do NOT invent or reorder information.
 - Return plain text only.`;
 
-    // Build multimodal message with base64 file
     const userContent: any[] = [
       {
         type: "image_url",
@@ -143,6 +260,14 @@ STEP 3 — CORRUPTION PREVENTION:
       return jsonResponse(422, {
         error: "Could not extract text from the file. Try a different file or paste your resume instead.",
       });
+    }
+
+    return jsonResponse(200, { text: extractedText.trim() });
+  } catch (e) {
+    console.error("extract-resume error:", e);
+    return jsonResponse(500, { error: e instanceof Error ? e.message : "Unknown error" });
+  }
+});
     }
 
     return jsonResponse(200, { text: extractedText.trim() });

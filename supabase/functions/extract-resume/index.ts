@@ -64,15 +64,28 @@ serve(async (req) => {
     if (isPdf && !mimeType.includes("pdf")) mimeType = "application/pdf";
     if (isDoc && !mimeType.includes("word")) mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-    const extractPrompt = `First, visually analyze the layout of this resume. Pay close attention to how information is spatially grouped — job titles, company names, locations, and dates often appear on the same visual line or row even if they are in different columns (e.g. left-aligned title with right-aligned dates).
+    const extractPrompt = `You are extracting text from a resume document. Follow these instructions carefully:
 
-Then extract all text following these rules:
+STEP 1 — VISUAL LAYOUT ANALYSIS:
+Before extracting any text, study the VISUAL layout of the document. Pay attention to:
+- Column structure: many resumes use two columns or have right-aligned dates
+- Line boundaries: text that appears on the SAME visual row belongs together, even if rendered in separate text boxes
+- Bullet points: each bullet "•" or "–" starts a NEW, self-contained statement
+- Words that are visually part of the same line must NEVER be split across output lines
+
+STEP 2 — EXTRACTION RULES:
 - For each job/position entry, combine the job title, company name, location, AND dates onto ONE line separated by " | ". Example: "Senior Project Manager | Acme Corp, New York, NY | Jan 2020 - Present"
 - For each education entry, combine degree, school, AND date onto ONE line separated by " | ". Example: "B.S. in Biology | State University | May 2019"
 - NEVER put dates on their own separate line. Dates MUST stay attached to the job or education entry they belong to.
 - If dates appear in a right-aligned column on the same row as a job title, merge them onto one line.
+- Each bullet point must be a COMPLETE, self-contained sentence or phrase. NEVER truncate or split a bullet across multiple lines.
 - Preserve all bullet points exactly as written (use "• " prefix).
 - Preserve section headings (EXPERIENCE, EDUCATION, SKILLS, etc.).
+
+STEP 3 — CORRUPTION PREVENTION:
+- NEVER truncate the beginning of a word. If you see text like "viceNow" it should be "ServiceNow". If you see "tors" it should be "contractors". Always output complete words.
+- NEVER merge two separate bullet points into one line. Each bullet is independent.
+- If a bullet point wraps to a second visual line, combine it into ONE complete bullet in the output.
 - Do NOT paraphrase, normalize, spell-correct, or expand abbreviations.
 - Do NOT invent or reorder information.
 - Return plain text only.`;

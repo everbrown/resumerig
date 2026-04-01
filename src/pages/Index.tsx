@@ -243,7 +243,7 @@ const Index = () => {
               Resume<span className="text-secondary">Rig</span>
             </h1>
             <p className="mt-2 font-mono text-sm uppercase tracking-[0.2em] text-secondary/80">
-              Your unfair advantage
+              The Hardest Part of a Career Pivot Isn't the Work—It's the Translation.
             </p>
             <p className="mt-4 font-body text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
                Switching industries? Your experience doesn't translate — and recruiters won't do it for you. ResumeRig <em className="text-primary-foreground not-italic font-medium">identifies your target domain</em> and

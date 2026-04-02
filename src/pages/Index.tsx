@@ -246,7 +246,7 @@ const Index = () => {
               <Sparkles className="h-4 w-4" />
               AI-Powered Resume Translator
             </div>
-            <h1 className="font-display text-4xl font-bold tracking-tight text-primary-foreground sm:text-5xl lg:text-7xl">
+            <h1 className="font-display text-5xl font-bold tracking-tight text-primary-foreground sm:text-6xl lg:text-8xl">
               Resume<span className="text-secondary">Rig</span>
             </h1>
             <h2 className="mt-4 font-display text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-primary-foreground leading-tight max-w-3xl mx-auto">

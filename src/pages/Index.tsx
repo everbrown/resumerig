@@ -253,7 +253,7 @@ const Index = () => {
               The Hardest Part of a Career Pivot Isn't the Work—It's the Translation.
             </h2>
             <p className="mt-4 font-body text-base sm:text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
-               Your experience is elite, but recruiters won't connect the dots for you. Stop letting ATS (Application Tracking System) filters ignore your potential. Resume Rig <em className="text-primary-foreground not-italic font-medium">identifies your target domain</em> and hard-codes your professional data to speak its language.
+               Your experience is elite, but <strong className="text-primary-foreground font-semibold">recruiters won't connect the dots for you.</strong> Stop letting ATS (Application Tracking System) filters ignore your potential. Resume Rig <em className="text-primary-foreground not-italic font-medium">identifies your target domain</em> and <strong className="text-primary-foreground font-semibold">hard-codes your professional data</strong> to speak its language.
             </p>
           </motion.div>
         </div>

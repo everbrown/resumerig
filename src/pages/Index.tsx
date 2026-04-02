@@ -334,7 +334,7 @@ const Index = () => {
             size="lg"
             className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg disabled:opacity-50"
           >
-            Re-Engineer My Resume
+            Hard-code My Resume
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>

@@ -15,7 +15,7 @@ const Footer = () => {
 
           {/* Links */}
           <nav className="flex flex-wrap justify-center gap-x-6 gap-y-2">
-            <a href="mailto:support@resumerig.com" className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="/contact" className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors">
               Contact
             </a>
             <a href="/privacy" className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors">

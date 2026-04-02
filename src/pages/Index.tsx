@@ -256,6 +256,14 @@ const Index = () => {
             <p className="mt-4 font-body text-base sm:text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
                Your experience is elite, but <strong className="text-primary-foreground font-semibold">recruiters won't connect the dots for you.</strong> Stop letting ATS (Application Tracking System) filters ignore your potential. Resume Rig identifies your target domain and <strong className="text-primary-foreground font-semibold">hard-codes your professional data</strong> to speak its language.
             </p>
+            <Button
+              onClick={() => document.getElementById('resume-input-section')?.scrollIntoView({ behavior: 'smooth' })}
+              size="lg"
+              className="mt-6 gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg"
+            >
+              Hard-code My Resume
+              <ArrowRight className="h-5 w-5" />
+            </Button>
           </motion.div>
         </div>
       </header>
@@ -264,7 +272,7 @@ const Index = () => {
       {!result && <BeforeAfterShowcase />}
 
       {/* Input Section */}
-      <main className="mx-auto max-w-4xl px-6 py-12 space-y-12">
+      <main id="resume-input-section" className="mx-auto max-w-4xl px-6 py-12 space-y-12">
         {/* Pulsing arrow CTA */}
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}

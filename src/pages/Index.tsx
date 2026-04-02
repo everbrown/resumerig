@@ -246,7 +246,7 @@ const Index = () => {
               <Sparkles className="h-4 w-4" />
               AI-Powered Resume Translator
             </div>
-            <img src="/favicon.png" alt="Resume Rig logo" className="mx-auto mb-6 h-24 w-24 sm:h-32 sm:w-32" />
+            <img src="/favicon.png" alt="Resume Rig logo" className="mx-auto mb-6 h-36 w-36 sm:h-48 sm:w-48" />
             <h1 className="font-display text-5xl font-bold tracking-tight text-primary-foreground sm:text-6xl lg:text-8xl">
               Resume<span className="text-secondary">Rig</span>
             </h1>

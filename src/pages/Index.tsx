@@ -280,10 +280,6 @@ const Index = () => {
           transition={{ duration: 0.5 }}
           className="flex flex-col items-center gap-2"
         >
-          <p className="text-center text-lg font-semibold text-foreground">
-            Paste your resume & JD to see the magic
-          </p>
-          <p className="text-sm text-muted-foreground">Your first try is free — no credit card needed</p>
           <motion.div
             animate={{ y: [0, 8, 0] }}
             transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}

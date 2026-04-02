@@ -52,22 +52,22 @@ const BeforeAfterShowcase = () => {
               transition={{ duration: 0.4, delay: i * 0.1 }}
               className="rounded-2xl border border-border bg-card p-6 space-y-4"
             >
-              <span className="inline-block font-mono text-xs uppercase tracking-wider text-secondary bg-secondary/10 px-3 py-1 rounded-full">
+              <span className="inline-block font-mono text-sm uppercase tracking-wider text-accent-foreground bg-accent/20 px-3 py-1 rounded-full">
                 {ex.domain}
               </span>
               <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] items-start">
                 <div className="space-y-2">
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Before</p>
-                  <p className="font-body text-sm text-muted-foreground leading-relaxed">
+                  <p className="font-mono text-xs uppercase tracking-widest text-muted-foreground">Before</p>
+                  <p className="font-body text-base text-muted-foreground leading-relaxed">
                     {ex.before}
                   </p>
                 </div>
                 <div className="hidden md:flex items-center justify-center pt-6">
-                  <ArrowRight className="h-5 w-5 text-secondary" />
+                  <ArrowRight className="h-5 w-5 text-accent-foreground" />
                 </div>
                 <div className="space-y-2">
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-secondary">After</p>
-                  <p className="font-body text-sm text-foreground leading-relaxed font-medium">
+                  <p className="font-mono text-xs uppercase tracking-widest text-accent-foreground">After</p>
+                  <p className="font-body text-base text-foreground leading-relaxed font-medium">
                     {ex.after}
                   </p>
                 </div>

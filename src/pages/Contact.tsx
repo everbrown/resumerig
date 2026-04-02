@@ -36,17 +36,30 @@ const Contact = () => {
     }
 
     setSending(true);
+    const id = crypto.randomUUID();
     const { error } = await supabase
       .from("contact_submissions")
-      .insert({ name: trimmedName, email: trimmedEmail, message: trimmedMessage });
-
-    setSending(false);
+      .insert({ id, name: trimmedName, email: trimmedEmail, message: trimmedMessage });
 
     if (error) {
+      setSending(false);
       toast.error("Something went wrong. Please try again.");
       return;
     }
 
+    // Send confirmation email to the user
+    supabase.functions.invoke("send-transactional-email", {
+      body: {
+        templateName: "contact-confirmation",
+        recipientEmail: trimmedEmail,
+        idempotencyKey: `contact-confirm-${id}`,
+        templateData: { name: trimmedName },
+      },
+    }).catch(() => {
+      // Non-critical — form was already saved
+    });
+
+    setSending(false);
     toast.success("Message sent! We'll get back to you soon.");
     setName("");
     setEmail("");

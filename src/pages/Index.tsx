@@ -264,17 +264,27 @@ const Index = () => {
 
       {/* Input Section */}
       <main className="mx-auto max-w-4xl px-6 py-12 space-y-12">
-        {/* Subtle inline CTA prompt */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="text-center text-lg font-medium text-muted-foreground"
+        {/* Pulsing arrow CTA */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="flex flex-col items-center gap-2"
         >
-          <span className="animate-bounce inline-block mr-1">👇</span>
-          Drop your resume below to get started
-          <span className="animate-bounce inline-block ml-1">👇</span>
-        </motion.p>
+          <p className="text-center text-lg font-semibold text-foreground">
+            Paste your resume & JD to see the magic
+          </p>
+          <p className="text-sm text-muted-foreground">Your first tune is free — no credit card needed</p>
+          <motion.div
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+            className="text-destructive mt-1"
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12l7 7 7-7" />
+            </svg>
+          </motion.div>
+        </motion.div>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

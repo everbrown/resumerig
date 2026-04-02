@@ -32,10 +32,10 @@ const BeforeAfterShowcase = () => {
         >
           <div className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-4 py-1.5 text-sm font-body text-secondary mb-4">
             <Sparkles className="h-4 w-4" />
-            Real Transformations
+            LIVE ALIGNMENTS
           </div>
           <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
-            See the <span className="text-secondary">difference</span>
+            Stop Translating. Start <span className="text-secondary">Aligning.</span>
           </h2>
           <p className="mt-3 font-body text-muted-foreground max-w-xl mx-auto">
             Industry-specific language that makes recruiters stop scrolling

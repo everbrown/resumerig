@@ -242,11 +242,11 @@ const Index = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <img src="/favicon.png" alt="Resume Rig logo" className="mx-auto mb-6 h-16 w-16 sm:h-20 sm:w-20" />
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-4 py-1.5 text-sm font-body text-secondary">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-4 py-1.5 text-sm font-body text-secondary">
               <Sparkles className="h-4 w-4" />
               AI-Powered Resume Translator
             </div>
+            <img src="/favicon.png" alt="Resume Rig logo" className="mx-auto mb-6 h-24 w-24 sm:h-32 sm:w-32" />
             <h1 className="font-display text-5xl font-bold tracking-tight text-primary-foreground sm:text-6xl lg:text-8xl">
               Resume<span className="text-secondary">Rig</span>
             </h1>

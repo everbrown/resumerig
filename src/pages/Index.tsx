@@ -264,6 +264,17 @@ const Index = () => {
 
       {/* Input Section */}
       <main className="mx-auto max-w-4xl px-6 py-12 space-y-12">
+        {/* Subtle inline CTA prompt */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="text-center text-lg font-medium text-muted-foreground"
+        >
+          <span className="animate-bounce inline-block mr-1">👇</span>
+          Drop your resume below to get started
+          <span className="animate-bounce inline-block ml-1">👇</span>
+        </motion.p>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

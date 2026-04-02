@@ -261,7 +261,7 @@ const Index = () => {
               size="lg"
               className="mt-6 gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg"
             >
-              Hard-code My Resume
+              HARD-CODE MY FIRST RESUME — FREE
               <ArrowRight className="h-5 w-5" />
             </Button>
           </motion.div>

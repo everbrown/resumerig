@@ -249,7 +249,7 @@ const Index = () => {
             <h1 className="font-display text-4xl font-bold tracking-tight text-primary-foreground sm:text-5xl lg:text-7xl">
               Resume<span className="text-secondary">Rig</span>
             </h1>
-            <h2 className="mt-4 font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-primary-foreground leading-tight max-w-3xl mx-auto">
+            <h2 className="mt-4 font-display text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-primary-foreground leading-tight max-w-3xl mx-auto">
               The Hardest Part of a Career Pivot Isn't the Work—It's the Translation.
             </h2>
             <p className="mt-4 font-body text-base sm:text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">

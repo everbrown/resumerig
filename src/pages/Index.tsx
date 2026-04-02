@@ -249,10 +249,10 @@ const Index = () => {
             <h1 className="font-display text-4xl font-bold tracking-tight text-primary-foreground sm:text-5xl lg:text-7xl">
               Resume<span className="text-secondary">Rig</span>
             </h1>
-            <p className="mt-2 font-mono text-sm uppercase tracking-[0.2em] text-secondary/80">
+            <h2 className="mt-4 font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-primary-foreground leading-tight max-w-3xl mx-auto">
               The Hardest Part of a Career Pivot Isn't the Work—It's the Translation.
-            </p>
-            <p className="mt-4 font-body text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
+            </h2>
+            <p className="mt-4 font-body text-base sm:text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
                Your experience is elite, but recruiters won't connect the dots for you. Stop letting ATS (Application Tracking System) filters ignore your potential. Resume Rig <em className="text-primary-foreground not-italic font-medium">identifies your target domain</em> and hard-codes your professional data to speak its language.
             </p>
           </motion.div>

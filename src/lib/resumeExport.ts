@@ -305,32 +305,33 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
   };
 
   for (const section of sections) {
-    if (section.heading) {
-      // Match DOCX: spacing before heading paragraph
+    const isSuppressed = section.heading && SUPPRESSED_HEADINGS.includes(section.heading.toUpperCase().replace(/[:\s]+$/g, ""));
+
+    if (section.heading && !isSuppressed) {
+      // Spacing before heading paragraph
       y += sectionGapBefore;
       ensureSpace(30);
 
       // Heading: uppercase, bold, brand green, with letter-spacing
-      // DOCX uses characterSpacing: 80 (in 1/20th of a point = 4pt extra per char)
       pdf.setFontSize(headingFontSize);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(...BRAND_GREEN_RGB);
 
       const headingText = section.heading.toUpperCase();
-      const charSpacing = isOnePage ? 2.5 : 4.0; // match DOCX characterSpacing 80
+      const charSpacing = isOnePage ? 2.5 : 4.0;
       let xPos = margin;
       for (let i = 0; i < headingText.length; i++) {
         pdf.text(headingText[i], xPos, y);
         xPos += pdf.getTextWidth(headingText[i]) + charSpacing;
       }
 
-      // Bottom border in full brand green (matching DOCX border color, not faded)
+      // Bottom border in brand green
       const borderY = y + 4;
       pdf.setDrawColor(...BRAND_GREEN_RGB);
-      pdf.setLineWidth(0.75); // DOCX border size 4 ≈ 0.5–1pt
+      pdf.setLineWidth(0.75);
       pdf.line(margin, borderY, pageWidth - margin, borderY);
 
-      // Gap after border (DOCX after: 120 twips ≈ 6pt)
+      // Gap after border
       y = borderY + headingGapAfter;
     }
 

@@ -182,13 +182,12 @@ const ResumeInput = ({
             </div>
           </div>
           <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 font-body text-xs border-amber-500/30 hover:bg-amber-500/10 text-amber-700 dark:text-amber-400"
+            size="default"
+            className="gap-2 font-body font-semibold text-sm bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg shadow-green-600/30 animate-pulse hover:animate-none transition-all"
             onClick={onReviewConfirmed}
           >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Text looks good — proceed
+            <CheckCircle2 className="h-4 w-4" />
+            ✅ Text Looks Good — Proceed
           </Button>
         </div>
       )}

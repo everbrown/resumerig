@@ -134,15 +134,17 @@ export async function downloadAsDocx(resumeText: string, filename?: string): Pro
   };
 
   for (const section of sections) {
-    if (section.heading) {
-      // Add spacing before heading
-      children.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
+    const isSuppressed = section.heading && SUPPRESSED_HEADINGS.includes(section.heading.toUpperCase().replace(/[:\s]+$/g, ""));
+
+    if (section.heading && !isSuppressed) {
+      // Add spacing before heading — generous gap for readability
+      children.push(new Paragraph({ spacing: { before: 360 }, children: [] }));
 
       // Section heading: uppercase, bold, green, with bottom border — matches on-screen style
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
-          spacing: { before: 100, after: 120 },
+          spacing: { before: 100, after: 180 },
           children: [
             new TextRun({
               text: section.heading.toUpperCase(),

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import ResumeDisplay from "@/components/ResumeDisplay";
 import { motion } from "framer-motion";
-import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut, Copy, Download, Check, FileDown, LayoutDashboard } from "lucide-react";
+import { FileText, Target, ArrowRight, Sparkles, Send, LogIn, LogOut, Copy, Download, Check, FileDown, LayoutDashboard, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";

@@ -155,7 +155,6 @@ const OnePageResume = ({
           <Download className="h-4 w-4" />
           Download .pdf
         </Button>
-        </Button>
       </div>
 
       {/* Regenerate */}

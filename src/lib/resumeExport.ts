@@ -28,6 +28,9 @@ const SECTION_HEADINGS = [
   "PROJECTS", "AWARDS", "VOLUNTEER", "PUBLICATIONS", "INTERESTS",
 ];
 
+// Headings that should be suppressed (not rendered as styled headings) in exports
+const SUPPRESSED_HEADINGS = ["SUMMARY", "PROFESSIONAL SUMMARY", "OBJECTIVE", "PROFILE"];
+
 function isHeadingLine(trimmed: string): boolean {
   const upper = trimmed.toUpperCase().replace(/[:\s]+$/g, "");
   if (SECTION_HEADINGS.includes(upper)) return true;
@@ -131,15 +134,17 @@ export async function downloadAsDocx(resumeText: string, filename?: string): Pro
   };
 
   for (const section of sections) {
-    if (section.heading) {
-      // Add spacing before heading
-      children.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
+    const isSuppressed = section.heading && SUPPRESSED_HEADINGS.includes(section.heading.toUpperCase().replace(/[:\s]+$/g, ""));
+
+    if (section.heading && !isSuppressed) {
+      // Add spacing before heading — generous gap for readability
+      children.push(new Paragraph({ spacing: { before: 360 }, children: [] }));
 
       // Section heading: uppercase, bold, green, with bottom border — matches on-screen style
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
-          spacing: { before: 100, after: 120 },
+          spacing: { before: 100, after: 180 },
           children: [
             new TextRun({
               text: section.heading.toUpperCase(),
@@ -251,9 +256,9 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
   // DOCX line spacing 276 = 1.15x; in PDF pts this means lineHeight = fontSize * 1.15
   const lineSpacing = isOnePage ? 1.2 : 1.15;
   // DOCX spacing before heading: 200 + 100 twips = 300 twips ≈ 15pt
-  const sectionGapBefore = isOnePage ? 8 : 15;
-  // DOCX spacing after heading: 120 twips ≈ 6pt
-  const headingGapAfter = isOnePage ? 5 : 6;
+  const sectionGapBefore = isOnePage ? 12 : 24;
+  // DOCX spacing after heading: increased for readability
+  const headingGapAfter = isOnePage ? 7 : 10;
   // DOCX entry spacing before: 120 twips ≈ 6pt
   const entryTopGap = isOnePage ? 4 : 6;
   // DOCX bullet indent: left 540 twips ≈ 27pt, hanging 270 ≈ 13.5pt → text starts at ~27pt
@@ -300,32 +305,33 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
   };
 
   for (const section of sections) {
-    if (section.heading) {
-      // Match DOCX: spacing before heading paragraph
+    const isSuppressed = section.heading && SUPPRESSED_HEADINGS.includes(section.heading.toUpperCase().replace(/[:\s]+$/g, ""));
+
+    if (section.heading && !isSuppressed) {
+      // Spacing before heading paragraph
       y += sectionGapBefore;
       ensureSpace(30);
 
       // Heading: uppercase, bold, brand green, with letter-spacing
-      // DOCX uses characterSpacing: 80 (in 1/20th of a point = 4pt extra per char)
       pdf.setFontSize(headingFontSize);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(...BRAND_GREEN_RGB);
 
       const headingText = section.heading.toUpperCase();
-      const charSpacing = isOnePage ? 2.5 : 4.0; // match DOCX characterSpacing 80
+      const charSpacing = isOnePage ? 2.5 : 4.0;
       let xPos = margin;
       for (let i = 0; i < headingText.length; i++) {
         pdf.text(headingText[i], xPos, y);
         xPos += pdf.getTextWidth(headingText[i]) + charSpacing;
       }
 
-      // Bottom border in full brand green (matching DOCX border color, not faded)
+      // Bottom border in brand green
       const borderY = y + 4;
       pdf.setDrawColor(...BRAND_GREEN_RGB);
-      pdf.setLineWidth(0.75); // DOCX border size 4 ≈ 0.5–1pt
+      pdf.setLineWidth(0.75);
       pdf.line(margin, borderY, pageWidth - margin, borderY);
 
-      // Gap after border (DOCX after: 120 twips ≈ 6pt)
+      // Gap after border
       y = borderY + headingGapAfter;
     }
 

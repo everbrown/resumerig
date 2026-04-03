@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Minimize2, Loader2, Copy, Check, FileDown, Info } from "lucide-react";
+import { Minimize2, Loader2, Copy, Check, FileDown, Download, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ResumeDisplay from "@/components/ResumeDisplay";
-import { downloadAsDocx } from "@/lib/resumeExport";
+import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
 
 interface CondensedResult {
   condensedResume: string;
@@ -138,6 +138,22 @@ const OnePageResume = ({
         >
           <FileDown className="h-4 w-4" />
           Download .docx
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="gap-2 font-body"
+          onClick={() => {
+            try {
+              downloadAsPdf(result.condensedResume, { onePage: true });
+              toast.success("PDF downloaded!");
+            } catch {
+              toast.error("Failed to generate PDF");
+            }
+          }}
+        >
+          <Download className="h-4 w-4" />
+          Download .pdf
         </Button>
       </div>
 

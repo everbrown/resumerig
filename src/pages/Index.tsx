@@ -26,7 +26,7 @@ import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
-import { downloadAsDocx } from "@/lib/resumeExport";
+import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
 import { saveToHistory } from "@/lib/resumeHistory";
 import { redeemReferralCode } from "@/lib/referrals";
 
@@ -418,6 +418,22 @@ const Index = () => {
                 >
                   <FileDown className="h-4 w-4" />
                   Download .docx
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 font-body"
+                  onClick={() => {
+                    try {
+                      downloadAsPdf(result.tunedResume);
+                      toast.success("PDF downloaded!");
+                    } catch {
+                      toast.error("Failed to generate PDF");
+                    }
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  Download .pdf
                 </Button>
               </div>
             </ResultSection>

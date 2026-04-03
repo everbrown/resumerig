@@ -239,18 +239,30 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = isOnePage ? 40 : 50;
+  const margin = isOnePage ? 40 : 54;
   const maxWidth = pageWidth - margin * 2;
   let y = margin;
 
+  // Match ResumeDisplay: text-sm ≈ 10pt on-screen → 10.5pt in PDF for readability
   const baseFontSize = isOnePage ? 9.5 : 10.5;
-  const headingFontSize = isOnePage ? 11 : 11;
-  const lineSpacing = isOnePage ? 1.25 : 1.35;
-  const sectionGap = isOnePage ? 6 : 12;
-  const bulletGap = isOnePage ? 1 : 2;
-  const emptyLineGap = isOnePage ? 3 : 4;
+  const headingFontSize = isOnePage ? 10 : 10.5;
+  const lineSpacing = isOnePage ? 1.3 : 1.5; // leading-relaxed ≈ 1.625
+  const sectionGap = isOnePage ? 10 : 18; // space-y-5 ≈ 20px
+  const entryTopGap = isOnePage ? 6 : 10; // mt-3 ≈ 12px
+  const bulletIndent = 16;
+  const bulletRadius = 1.8;
 
   const sections = parseResumeSections(sanitizeForPdf(resumeText));
+
+  // Border color: secondary/30 opacity → blend with white
+  const BORDER_RGB: [number, number, number] = [166, 194, 176]; // brand green at ~30% on white
+
+  const ensureSpace = (needed: number) => {
+    if (!isOnePage && y + needed > pageHeight - margin) {
+      pdf.addPage();
+      y = margin;
+    }
+  };
 
   const addText = (
     text: string,
@@ -271,10 +283,7 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
     const lineHeight = fontSize * lineSpacing;
 
     for (const line of lines) {
-      if (!isOnePage && y + lineHeight > pageHeight - margin) {
-        pdf.addPage();
-        y = margin;
-      }
+      ensureSpace(lineHeight);
       if (y + lineHeight <= pageHeight - margin) {
         pdf.text(line, margin + indent, y);
       }
@@ -285,58 +294,57 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
   for (const section of sections) {
     if (section.heading) {
       y += sectionGap;
+      ensureSpace(30);
 
-      if (!isOnePage && y + 30 > pageHeight - margin) {
-        pdf.addPage();
-        y = margin;
-      }
-
-      // Heading text in brand green, uppercase, with letter-spacing
+      // --- Heading: uppercase, bold, green, letter-spaced, with subtle underline ---
       pdf.setFontSize(headingFontSize);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(...BRAND_GREEN_RGB);
 
-      // Simulate letter-spacing by printing each character manually
       const headingText = section.heading.toUpperCase();
-      const charSpacing = 1.5; // extra pt per character
+      const charSpacing = 2.0; // tracking-widest
       let xPos = margin;
       for (let i = 0; i < headingText.length; i++) {
         pdf.text(headingText[i], xPos, y);
         xPos += pdf.getTextWidth(headingText[i]) + charSpacing;
       }
 
-      // Underline below descenders
-      const underlineY = y + headingFontSize * 0.45;
-      pdf.setDrawColor(...BRAND_GREEN_RGB);
+      // Subtle bottom border (border-secondary/30) with pb-1.5 gap
+      const borderY = y + 5; // pb-1.5 ≈ 6px
+      pdf.setDrawColor(...BORDER_RGB);
       pdf.setLineWidth(0.5);
-      pdf.line(margin, underlineY, pageWidth - margin, underlineY);
+      pdf.line(margin, borderY, pageWidth - margin, borderY);
 
-      // Gap after rule
-      const bodyLineHeight = baseFontSize * lineSpacing;
-      y = underlineY + bodyLineHeight * 1.6;
+      // mb-3 ≈ 12px gap after border
+      y = borderY + (isOnePage ? 8 : 12);
     }
 
     for (const line of section.lines) {
       const trimmed = line.trim();
       if (!trimmed) {
-        y += emptyLineGap;
+        y += isOnePage ? 2 : 4;
         continue;
       }
 
       if (isBullet(trimmed)) {
-        // Draw a small filled circle bullet like the UI
-        const bulletY = y - baseFontSize * 0.25;
-        pdf.setFillColor(30, 30, 30);
-        pdf.circle(margin + 5, bulletY, 1.5, "F");
-        addText(cleanBullet(trimmed), { indent: 14 });
+        // Small filled circle matching the UI's h-1.5 w-1.5 rounded-full
+        const textBaseline = y;
+        const bulletY = textBaseline - baseFontSize * 0.28;
+        pdf.setFillColor(50, 50, 50);
+        pdf.circle(margin + bulletRadius + 2, bulletY, bulletRadius, "F");
+        addText(cleanBullet(trimmed), { indent: bulletIndent });
+        y += isOnePage ? 1 : 2; // space-y-1 between bullets
       } else {
-        const isSubheading = isEntryLine(trimmed);
+        const isEntry = isEntryLine(trimmed);
+        if (isEntry) {
+          y += entryTopGap; // mt-3 before entry lines
+        }
         addText(trimmed, {
-          bold: isSubheading,
-          fontSize: isSubheading ? baseFontSize + 0.5 : baseFontSize,
+          bold: isEntry,
+          fontSize: isEntry ? baseFontSize + 0.5 : baseFontSize,
         });
+        y += isOnePage ? 1 : 2;
       }
-      y += bulletGap;
     }
   }
 

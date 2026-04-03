@@ -26,7 +26,7 @@ import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
 import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
-import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
+import { downloadAsDocx } from "@/lib/resumeExport";
 import { saveToHistory } from "@/lib/resumeHistory";
 import { redeemReferralCode } from "@/lib/referrals";
 

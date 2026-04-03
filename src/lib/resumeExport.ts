@@ -6,22 +6,38 @@ import {
   AlignmentType,
   HeadingLevel,
   LevelFormat,
+  BorderStyle,
 } from "docx";
 import { saveAs } from "file-saver";
 import { jsPDF } from "jspdf";
 
 /**
  * Parse the tuned resume text into structured sections.
- * Expects a format like:
- *   NAME
- *   contact info
- *   ---
- *   SECTION HEADING
- *   content...
  */
 interface ResumeSection {
   heading?: string;
   lines: string[];
+}
+
+const SECTION_HEADINGS = [
+  "SUMMARY", "PROFESSIONAL SUMMARY", "OBJECTIVE", "PROFILE",
+  "EXPERIENCE", "PROFESSIONAL EXPERIENCE", "WORK EXPERIENCE", "EMPLOYMENT HISTORY", "RELEVANT EXPERIENCE",
+  "EDUCATION", "ACADEMIC BACKGROUND", "EDUCATIONAL BACKGROUND",
+  "SKILLS", "TECHNICAL SKILLS", "CORE COMPETENCIES", "KEY SKILLS",
+  "CERTIFICATIONS", "CERTIFICATES", "LICENSES",
+  "PROJECTS", "AWARDS", "VOLUNTEER", "PUBLICATIONS", "INTERESTS",
+];
+
+function isHeadingLine(trimmed: string): boolean {
+  const upper = trimmed.toUpperCase().replace(/[:\s]+$/g, "");
+  if (SECTION_HEADINGS.includes(upper)) return true;
+  return (
+    trimmed.length > 2 &&
+    trimmed.length < 60 &&
+    trimmed === trimmed.toUpperCase() &&
+    /[A-Z]/.test(trimmed) &&
+    !/^\d/.test(trimmed)
+  );
 }
 
 function parseResumeSections(text: string): ResumeSection[] {
@@ -32,18 +48,11 @@ function parseResumeSections(text: string): ResumeSection[] {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // Detect section headings: all-caps lines, or lines ending with ":"
-    const isHeading =
-      trimmed.length > 2 &&
-      trimmed.length < 60 &&
-      (trimmed === trimmed.toUpperCase() && /[A-Z]/.test(trimmed) && !/^\d/.test(trimmed)) ||
-      /^(SUMMARY|EXPERIENCE|EDUCATION|SKILLS|CERTIFICATIONS|PROFESSIONAL EXPERIENCE|WORK EXPERIENCE|PROJECTS|AWARDS|OBJECTIVE|PROFILE)/i.test(trimmed);
-
-    if (isHeading && current.lines.length > 0) {
-      sections.push(current);
-      current = { heading: trimmed, lines: [] };
-    } else if (isHeading && current.lines.length === 0 && !current.heading) {
-      current.heading = trimmed;
+    if (isHeadingLine(trimmed)) {
+      if (current.lines.length > 0 || current.heading) {
+        sections.push(current);
+      }
+      current = { heading: trimmed.replace(/[:\s]+$/g, ""), lines: [] };
     } else {
       current.lines.push(line);
     }
@@ -57,51 +66,47 @@ function parseResumeSections(text: string): ResumeSection[] {
 }
 
 function isBullet(line: string): boolean {
-  return /^\s*[•\-\*▪]\s/.test(line) || /^\s*\d+[\.\)]\s/.test(line);
+  return /^\s*[•\-\*▪●]\s/.test(line) || /^\s*\d+[\.\)]\s/.test(line);
 }
 
 function cleanBullet(line: string): string {
-  return line.replace(/^\s*[•\-\*▪]\s*/, "").replace(/^\s*\d+[\.\)]\s*/, "").trim();
+  return line.replace(/^\s*[•\-\*▪●]\s*/, "").replace(/^\s*\d+[\.\)]\s*/, "").trim();
+}
+
+function isEntryLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (trimmed.length >= 80) return false;
+  if (trimmed.includes("|") && trimmed.length > 10) return true;
+  if (/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)\s+\d{4}/i.test(trimmed)) return true;
+  if (/\b\d{4}\s*[-–—]\s*(?:\d{4}|present|current)\b/i.test(trimmed)) return true;
+  return false;
 }
 
 /**
  * Sanitize text for jsPDF (Helvetica only supports basic Latin).
- * - Replace unsupported Unicode separators/diamonds with " | "
- * - Shorten long URLs (strip protocol, trailing slashes)
- * - Replace smart quotes, em/en dashes with ASCII equivalents
  */
 function sanitizeForPdf(text: string): string {
   let s = text;
-  // Replace common Unicode separators that render as garbled "A" in Helvetica
   s = s.replace(/[\u00C4\u2022\u25C6\u25CF\u2666\u00B7\u2043\u25AA\u25AB\u25E6\u2219\u00A4\u2023]/g, "|");
-  // Replace diamond/separator patterns like "Ä" used as delimiters
   s = s.replace(/\s*[""]\s*/g, " | ");
-  // Smart quotes to ASCII
   s = s.replace(/[\u2018\u2019\u201A]/g, "'");
   s = s.replace(/[\u201C\u201D\u201E]/g, '"');
-  // Em/en dashes
   s = s.replace(/[\u2013\u2014]/g, "-");
-  // Ellipsis
   s = s.replace(/\u2026/g, "...");
-  // Clean up any remaining non-ASCII that Helvetica can't render (preserve accented Latin)
-  s = s.replace(/[^\x00-\x7F\u00C0-\u00FF]/g, (ch) => {
-    // Keep standard accented Latin characters, replace everything else
-    return " ";
-  });
-  // Clean up multiple pipes/spaces
+  s = s.replace(/[^\x00-\x7F\u00C0-\u00FF]/g, () => " ");
   s = s.replace(/\s*\|\s*\|\s*/g, " | ");
   s = s.replace(/\s{2,}/g, " ");
-  
-  // Shorten long URLs: strip protocol and trailing slash
   s = s.replace(/https?:\/\/(www\.)?/g, "");
   s = s.replace(/\/+(\s|$)/g, "$1");
-  
   return s.trim();
 }
 
-export async function downloadAsDocx(resumeText: string): Promise<void> {
-  const sections = parseResumeSections(resumeText);
+// Brand color matching the on-screen display
+const BRAND_GREEN = "2B5C3F";
+const BRAND_GREEN_RGB: [number, number, number] = [43, 92, 63];
 
+export async function downloadAsDocx(resumeText: string, filename?: string): Promise<void> {
+  const sections = parseResumeSections(resumeText);
   const children: Paragraph[] = [];
 
   const numbering = {
@@ -116,7 +121,7 @@ export async function downloadAsDocx(resumeText: string): Promise<void> {
             alignment: AlignmentType.LEFT,
             style: {
               paragraph: {
-                indent: { left: 720, hanging: 360 },
+                indent: { left: 540, hanging: 270 },
               },
             },
           },
@@ -126,25 +131,30 @@ export async function downloadAsDocx(resumeText: string): Promise<void> {
   };
 
   for (const section of sections) {
-    // Section heading
     if (section.heading) {
+      // Add spacing before heading
+      children.push(new Paragraph({ spacing: { before: 200 }, children: [] }));
+
+      // Section heading: uppercase, bold, green, with bottom border — matches on-screen style
       children.push(
         new Paragraph({
           heading: HeadingLevel.HEADING_2,
-          spacing: { before: 300, after: 100 },
+          spacing: { before: 100, after: 120 },
           children: [
             new TextRun({
-              text: section.heading,
+              text: section.heading.toUpperCase(),
               bold: true,
-              size: 26, // 13pt
+              size: 22, // 11pt
               font: "Calibri",
+              color: BRAND_GREEN,
+              characterSpacing: 80, // wide letter-spacing like the UI
             }),
           ],
           border: {
             bottom: {
-              style: "single" as any,
+              style: BorderStyle.SINGLE,
               size: 4,
-              color: "2B5C3F",
+              color: BRAND_GREEN,
               space: 4,
             },
           },
@@ -152,11 +162,10 @@ export async function downloadAsDocx(resumeText: string): Promise<void> {
       );
     }
 
-    // Section content
     for (const line of section.lines) {
       const trimmed = line.trim();
       if (!trimmed) {
-        children.push(new Paragraph({ spacing: { before: 60 }, children: [] }));
+        children.push(new Paragraph({ spacing: { before: 40 }, children: [] }));
         continue;
       }
 
@@ -164,32 +173,30 @@ export async function downloadAsDocx(resumeText: string): Promise<void> {
         children.push(
           new Paragraph({
             numbering: { reference: "bullets", level: 0 },
-            spacing: { before: 40, after: 40 },
+            spacing: { before: 30, after: 30, line: 276 }, // 1.15x line spacing
             children: [
               new TextRun({
                 text: cleanBullet(trimmed),
-                size: 22, // 11pt
+                size: 21, // 10.5pt
                 font: "Calibri",
+                color: "1E1E1E",
               }),
             ],
           })
         );
       } else {
-        // Check if it looks like a job title / company line (bold)
-        const isSubheading =
-          trimmed.length < 80 &&
-          (/\|/.test(trimmed) || /\d{4}/.test(trimmed)) &&
-          !trimmed.startsWith("(");
+        const isSubheading = isEntryLine(trimmed);
 
         children.push(
           new Paragraph({
-            spacing: { before: 80, after: 40 },
+            spacing: { before: isSubheading ? 120 : 40, after: 30, line: 276 },
             children: [
               new TextRun({
                 text: trimmed,
-                size: 22, // 11pt
+                size: isSubheading ? 22 : 21,
                 font: "Calibri",
                 bold: isSubheading,
+                color: "1E1E1E",
               }),
             ],
           })
@@ -203,7 +210,7 @@ export async function downloadAsDocx(resumeText: string): Promise<void> {
     styles: {
       default: {
         document: {
-          run: { font: "Calibri", size: 22 },
+          run: { font: "Calibri", size: 21 },
         },
       },
     },
@@ -212,7 +219,7 @@ export async function downloadAsDocx(resumeText: string): Promise<void> {
         properties: {
           page: {
             size: { width: 12240, height: 15840 },
-            margin: { top: 1080, right: 1080, bottom: 1080, left: 1080 }, // 0.75" margins
+            margin: { top: 1080, right: 1080, bottom: 1080, left: 1080 },
           },
         },
         children,
@@ -221,32 +228,27 @@ export async function downloadAsDocx(resumeText: string): Promise<void> {
   });
 
   const blob = await Packer.toBlob(doc);
-  saveAs(blob, "refined-resume.docx");
+  saveAs(blob, filename || "aligned-resume.docx");
 }
 
 export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean }): void {
   const isOnePage = options?.onePage ?? false;
   const format = isOnePage ? "a4" : "letter";
-  
-  const pdf = new jsPDF({
-    unit: "pt",
-    format,
-  });
+
+  const pdf = new jsPDF({ unit: "pt", format });
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = isOnePage ? 40 : 54; // tighter margins for 1-page
+  const margin = isOnePage ? 40 : 50;
   const maxWidth = pageWidth - margin * 2;
   let y = margin;
 
-  // For one-page mode, use smaller fonts and tighter spacing
-  const baseFontSize = isOnePage ? 9.5 : 11;
-  const headingFontSize = isOnePage ? 11 : 13;
-  const lineSpacing = isOnePage ? 1.25 : 1.4;
-  const sectionGap = isOnePage ? 4 : 8;
+  const baseFontSize = isOnePage ? 9.5 : 10.5;
+  const headingFontSize = isOnePage ? 11 : 11;
+  const lineSpacing = isOnePage ? 1.25 : 1.35;
+  const sectionGap = isOnePage ? 6 : 12;
   const bulletGap = isOnePage ? 1 : 2;
-  const emptyLineGap = isOnePage ? 3 : 6;
-  const headingUnderGap = isOnePage ? 3 : 6;
+  const emptyLineGap = isOnePage ? 3 : 4;
 
   const sections = parseResumeSections(sanitizeForPdf(resumeText));
 
@@ -273,7 +275,6 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
         pdf.addPage();
         y = margin;
       }
-      // In one-page mode, just keep writing (overflow hidden by design)
       if (y + lineHeight <= pageHeight - margin) {
         pdf.text(line, margin + indent, y);
       }
@@ -290,21 +291,29 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
         y = margin;
       }
 
-      // Draw heading text — jsPDF y is the text BASELINE
+      // Heading text in brand green, uppercase, with letter-spacing
       pdf.setFontSize(headingFontSize);
       pdf.setFont("helvetica", "bold");
-      pdf.setTextColor(43, 92, 63);
-      pdf.text(section.heading, margin, y);
-      
-      // Underline well below descenders
-      const underlineY = y + headingFontSize * 0.55;
-      pdf.setDrawColor(43, 92, 63);
+      pdf.setTextColor(...BRAND_GREEN_RGB);
+
+      // Simulate letter-spacing by printing each character manually
+      const headingText = section.heading.toUpperCase();
+      const charSpacing = 1.5; // extra pt per character
+      let xPos = margin;
+      for (let i = 0; i < headingText.length; i++) {
+        pdf.text(headingText[i], xPos, y);
+        xPos += pdf.getTextWidth(headingText[i]) + charSpacing;
+      }
+
+      // Underline below descenders
+      const underlineY = y + headingFontSize * 0.45;
+      pdf.setDrawColor(...BRAND_GREEN_RGB);
       pdf.setLineWidth(0.5);
       pdf.line(margin, underlineY, pageWidth - margin, underlineY);
-      
-      // 2 full line-heights of gap after the rule so text never touches it
+
+      // Gap after rule
       const bodyLineHeight = baseFontSize * lineSpacing;
-      y = underlineY + bodyLineHeight * 2;
+      y = underlineY + bodyLineHeight * 1.6;
     }
 
     for (const line of section.lines) {
@@ -315,16 +324,21 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
       }
 
       if (isBullet(trimmed)) {
-        addText(`\u2022  ${cleanBullet(trimmed)}`, { indent: 14 });
+        // Draw a small filled circle bullet like the UI
+        const bulletY = y - baseFontSize * 0.25;
+        pdf.setFillColor(30, 30, 30);
+        pdf.circle(margin + 5, bulletY, 1.5, "F");
+        addText(cleanBullet(trimmed), { indent: 14 });
       } else {
-        const isSubheading =
-          trimmed.length < 80 &&
-          (/\|/.test(trimmed) || /\d{4}/.test(trimmed));
-        addText(trimmed, { bold: isSubheading });
+        const isSubheading = isEntryLine(trimmed);
+        addText(trimmed, {
+          bold: isSubheading,
+          fontSize: isSubheading ? baseFontSize + 0.5 : baseFontSize,
+        });
       }
       y += bulletGap;
     }
   }
 
-  pdf.save(isOnePage ? "one-page-resume.pdf" : "refined-resume.pdf");
+  pdf.save(isOnePage ? "one-page-resume.pdf" : "aligned-resume.pdf");
 }

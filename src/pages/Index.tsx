@@ -337,6 +337,7 @@ const Index = () => {
 
         <div className="flex justify-center">
           <Button
+            id="rr-analyze-btn"
             onClick={handleAnalyze}
             disabled={!canSubmit || loading}
             size="lg"

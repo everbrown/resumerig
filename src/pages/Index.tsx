@@ -315,7 +315,11 @@ const Index = () => {
             needsReview={needsReview}
             onReviewConfirmed={() => {
               setNeedsReview(false);
-              toast.success("Great — you're ready to transform!");
+              toast.success("Great — launching alignment!");
+              // Auto-trigger the analysis after confirming review
+              setTimeout(() => {
+                document.getElementById("rr-analyze-btn")?.click();
+              }, 100);
             }}
           />
           <ResumeInput
@@ -333,6 +337,7 @@ const Index = () => {
 
         <div className="flex justify-center">
           <Button
+            id="rr-analyze-btn"
             onClick={handleAnalyze}
             disabled={!canSubmit || loading}
             size="lg"

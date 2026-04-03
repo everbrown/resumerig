@@ -256,9 +256,9 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
   // DOCX line spacing 276 = 1.15x; in PDF pts this means lineHeight = fontSize * 1.15
   const lineSpacing = isOnePage ? 1.2 : 1.15;
   // DOCX spacing before heading: 200 + 100 twips = 300 twips ≈ 15pt
-  const sectionGapBefore = isOnePage ? 8 : 15;
-  // DOCX spacing after heading: 120 twips ≈ 6pt
-  const headingGapAfter = isOnePage ? 5 : 6;
+  const sectionGapBefore = isOnePage ? 12 : 24;
+  // DOCX spacing after heading: increased for readability
+  const headingGapAfter = isOnePage ? 7 : 10;
   // DOCX entry spacing before: 120 twips ≈ 6pt
   const entryTopGap = isOnePage ? 4 : 6;
   // DOCX bullet indent: left 540 twips ≈ 27pt, hanging 270 ≈ 13.5pt → text starts at ~27pt

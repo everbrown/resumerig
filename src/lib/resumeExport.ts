@@ -239,23 +239,33 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
+
+  // Match DOCX: 0.75in margins (1080 twips = 54pt)
   const margin = isOnePage ? 40 : 54;
   const maxWidth = pageWidth - margin * 2;
   let y = margin;
 
-  // Match ResumeDisplay: text-sm ≈ 10pt on-screen → 10.5pt in PDF for readability
+  // Match DOCX: Calibri 10.5pt body (size 21 half-pts), 11pt headings (size 22)
   const baseFontSize = isOnePage ? 9.5 : 10.5;
-  const headingFontSize = isOnePage ? 10 : 10.5;
-  const lineSpacing = isOnePage ? 1.3 : 1.5; // leading-relaxed ≈ 1.625
-  const sectionGap = isOnePage ? 10 : 18; // space-y-5 ≈ 20px
-  const entryTopGap = isOnePage ? 6 : 10; // mt-3 ≈ 12px
-  const bulletIndent = 16;
-  const bulletRadius = 1.8;
+  const headingFontSize = isOnePage ? 10 : 11;
+  // DOCX line spacing 276 = 1.15x; in PDF pts this means lineHeight = fontSize * 1.15
+  const lineSpacing = isOnePage ? 1.2 : 1.15;
+  // DOCX spacing before heading: 200 + 100 twips = 300 twips ≈ 15pt
+  const sectionGapBefore = isOnePage ? 8 : 15;
+  // DOCX spacing after heading: 120 twips ≈ 6pt
+  const headingGapAfter = isOnePage ? 5 : 6;
+  // DOCX entry spacing before: 120 twips ≈ 6pt
+  const entryTopGap = isOnePage ? 4 : 6;
+  // DOCX bullet indent: left 540 twips ≈ 27pt, hanging 270 ≈ 13.5pt → text starts at ~27pt
+  const bulletTextIndent = isOnePage ? 18 : 27;
+  const bulletDotX = isOnePage ? 8 : 10; // dot position within the indent
+  const bulletRadius = 1.5;
+  // DOCX bullet spacing before/after: 30 twips ≈ 1.5pt
+  const bulletGap = isOnePage ? 1 : 1.5;
+  // DOCX empty paragraph spacing: 40 twips ≈ 2pt
+  const emptyGap = isOnePage ? 1.5 : 2;
 
   const sections = parseResumeSections(sanitizeForPdf(resumeText));
-
-  // Border color: secondary/30 opacity → blend with white
-  const BORDER_RGB: [number, number, number] = [166, 194, 176]; // brand green at ~30% on white
 
   const ensureSpace = (needed: number) => {
     if (!isOnePage && y + needed > pageHeight - margin) {
@@ -283,67 +293,67 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
     const lineHeight = fontSize * lineSpacing;
 
     for (const line of lines) {
-      ensureSpace(lineHeight);
-      if (y + lineHeight <= pageHeight - margin) {
-        pdf.text(line, margin + indent, y);
-      }
+      ensureSpace(lineHeight + 2);
+      pdf.text(line, margin + indent, y);
       y += lineHeight;
     }
   };
 
   for (const section of sections) {
     if (section.heading) {
-      y += sectionGap;
+      // Match DOCX: spacing before heading paragraph
+      y += sectionGapBefore;
       ensureSpace(30);
 
-      // --- Heading: uppercase, bold, green, letter-spaced, with subtle underline ---
+      // Heading: uppercase, bold, brand green, with letter-spacing
+      // DOCX uses characterSpacing: 80 (in 1/20th of a point = 4pt extra per char)
       pdf.setFontSize(headingFontSize);
       pdf.setFont("helvetica", "bold");
       pdf.setTextColor(...BRAND_GREEN_RGB);
 
       const headingText = section.heading.toUpperCase();
-      const charSpacing = 2.0; // tracking-widest
+      const charSpacing = isOnePage ? 2.5 : 4.0; // match DOCX characterSpacing 80
       let xPos = margin;
       for (let i = 0; i < headingText.length; i++) {
         pdf.text(headingText[i], xPos, y);
         xPos += pdf.getTextWidth(headingText[i]) + charSpacing;
       }
 
-      // Subtle bottom border (border-secondary/30) with pb-1.5 gap
-      const borderY = y + 5; // pb-1.5 ≈ 6px
-      pdf.setDrawColor(...BORDER_RGB);
-      pdf.setLineWidth(0.5);
+      // Bottom border in full brand green (matching DOCX border color, not faded)
+      const borderY = y + 4;
+      pdf.setDrawColor(...BRAND_GREEN_RGB);
+      pdf.setLineWidth(0.75); // DOCX border size 4 ≈ 0.5–1pt
       pdf.line(margin, borderY, pageWidth - margin, borderY);
 
-      // mb-3 ≈ 12px gap after border
-      y = borderY + (isOnePage ? 8 : 12);
+      // Gap after border (DOCX after: 120 twips ≈ 6pt)
+      y = borderY + headingGapAfter;
     }
 
     for (const line of section.lines) {
       const trimmed = line.trim();
       if (!trimmed) {
-        y += isOnePage ? 2 : 4;
+        y += emptyGap;
         continue;
       }
 
       if (isBullet(trimmed)) {
-        // Small filled circle matching the UI's h-1.5 w-1.5 rounded-full
-        const textBaseline = y;
-        const bulletY = textBaseline - baseFontSize * 0.28;
-        pdf.setFillColor(50, 50, 50);
-        pdf.circle(margin + bulletRadius + 2, bulletY, bulletRadius, "F");
-        addText(cleanBullet(trimmed), { indent: bulletIndent });
-        y += isOnePage ? 1 : 2; // space-y-1 between bullets
+        y += bulletGap; // before spacing
+        // Filled circle bullet matching DOCX bullet style
+        const bulletY = y - baseFontSize * 0.28;
+        pdf.setFillColor(30, 30, 30);
+        pdf.circle(margin + bulletDotX, bulletY, bulletRadius, "F");
+        addText(cleanBullet(trimmed), { indent: bulletTextIndent });
+        y += bulletGap; // after spacing
       } else {
         const isEntry = isEntryLine(trimmed);
         if (isEntry) {
-          y += entryTopGap; // mt-3 before entry lines
+          y += entryTopGap;
         }
         addText(trimmed, {
           bold: isEntry,
           fontSize: isEntry ? baseFontSize + 0.5 : baseFontSize,
         });
-        y += isOnePage ? 1 : 2;
+        y += bulletGap;
       }
     }
   }

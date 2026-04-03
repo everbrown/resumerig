@@ -139,22 +139,6 @@ const OnePageResume = ({
           <FileDown className="h-4 w-4" />
           Download .docx
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="gap-2 font-body"
-          onClick={() => {
-            try {
-              downloadAsPdf(result.condensedResume, { onePage: true });
-              toast.success("PDF downloaded!");
-            } catch {
-              toast.error("Failed to generate PDF");
-            }
-          }}
-        >
-          <Download className="h-4 w-4" />
-          Download .pdf
-        </Button>
       </div>
 
       {/* Regenerate */}

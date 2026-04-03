@@ -435,6 +435,22 @@ const Index = () => {
                   <Download className="h-4 w-4" />
                   Download .pdf
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="gap-2 font-body"
+                  onClick={async () => {
+                    try {
+                      await downloadAsDocx(result.tunedResume, "aligned-resume-gdocs.docx");
+                      toast.success("Google Docs-compatible file downloaded! Open it in Google Docs.");
+                    } catch {
+                      toast.error("Failed to generate file");
+                    }
+                  }}
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  Google Docs
+                </Button>
               </div>
             </ResultSection>
 

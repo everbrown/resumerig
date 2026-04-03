@@ -28,6 +28,9 @@ const SECTION_HEADINGS = [
   "PROJECTS", "AWARDS", "VOLUNTEER", "PUBLICATIONS", "INTERESTS",
 ];
 
+// Headings that should be suppressed (not rendered as styled headings) in exports
+const SUPPRESSED_HEADINGS = ["SUMMARY", "PROFESSIONAL SUMMARY", "OBJECTIVE", "PROFILE"];
+
 function isHeadingLine(trimmed: string): boolean {
   const upper = trimmed.toUpperCase().replace(/[:\s]+$/g, "");
   if (SECTION_HEADINGS.includes(upper)) return true;

@@ -77,7 +77,18 @@ serve(async (req) => {
       );
     }
 
-    // TEST MODE: credits/payments disabled — skip deduction
+    // Deduct credit
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
+    const { data: creditResult } = await supabaseAdmin.rpc("deduct_credit", { p_user_id: user.id });
+    if (creditResult === -1) {
+      return new Response(
+        JSON.stringify({ error: "No credits remaining" }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {

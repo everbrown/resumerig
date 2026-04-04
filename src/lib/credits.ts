@@ -7,8 +7,22 @@ export interface CreditStatus {
 }
 
 export async function getCreditStatus(): Promise<CreditStatus> {
-  // TEST MODE: credits/payments disabled — always return unlimited
-  return { hasUsedFreeCredit: false, balance: 999, isAuthenticated: true };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { hasUsedFreeCredit: false, balance: 0, isAuthenticated: false };
+  }
+
+  const { data } = await supabase
+    .from("credit_balances")
+    .select("balance, has_used_free_credit")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  return {
+    hasUsedFreeCredit: data?.has_used_free_credit ?? false,
+    balance: data?.balance ?? 5,
+    isAuthenticated: true,
+  };
 }
 
 export async function markFreeCreditUsed(): Promise<void> {

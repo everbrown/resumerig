@@ -6,11 +6,17 @@ export interface ReferralInfo {
   maxUses: number;
 }
 
+export interface ReferralRedemption {
+  id: string;
+  status: string;
+  created_at: string;
+  redeemed_by: string;
+}
+
 export async function getOrCreateReferralCode(): Promise<ReferralInfo | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Check for existing code
   const { data: existing } = await supabase
     .from("referral_codes" as any)
     .select("code, uses, max_uses")
@@ -25,7 +31,6 @@ export async function getOrCreateReferralCode(): Promise<ReferralInfo | null> {
     };
   }
 
-  // Generate a unique code
   const code = `RIG-${user.id.slice(0, 4).toUpperCase()}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
   const { data: created, error } = await supabase
@@ -63,4 +68,44 @@ export async function hasRedeemedAnyCode(): Promise<boolean> {
     .maybeSingle();
 
   return !!data;
+}
+
+export async function getReferralRedemptions(): Promise<ReferralRedemption[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // Get referral codes owned by this user
+  const { data: codes } = await supabase
+    .from("referral_codes" as any)
+    .select("id")
+    .eq("user_id", user.id);
+
+  if (!codes || codes.length === 0) return [];
+
+  const codeIds = (codes as any[]).map((c: any) => c.id);
+
+  const { data: redemptions } = await supabase
+    .from("referral_redemptions" as any)
+    .select("id, status, created_at, redeemed_by")
+    .in("referral_code_id", codeIds)
+    .order("created_at", { ascending: false });
+
+  return (redemptions as any[] || []).map((r: any) => ({
+    id: r.id,
+    status: r.status,
+    created_at: r.created_at,
+    redeemed_by: r.redeemed_by,
+  }));
+}
+
+export function storeReferralCode(code: string) {
+  sessionStorage.setItem("rr_referral_code", code);
+}
+
+export function getStoredReferralCode(): string | null {
+  return sessionStorage.getItem("rr_referral_code");
+}
+
+export function clearStoredReferralCode() {
+  sessionStorage.removeItem("rr_referral_code");
 }

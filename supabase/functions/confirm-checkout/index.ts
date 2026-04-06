@@ -99,6 +99,9 @@ serve(async (req) => {
       });
     }
 
+    // Fulfill referral bonus if applicable
+    await supabaseAdmin.rpc("fulfill_referral_bonus", { p_user_id: user.id });
+
     const { data: balanceRow } = await supabaseAdmin
       .from("credit_balances")
       .select("balance, has_used_free_credit")

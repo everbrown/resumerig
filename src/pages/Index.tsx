@@ -34,6 +34,7 @@ const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const pendingActionKey = "rr_pending_paid_action";
   const [resume, setResume] = useState(() => sessionStorage.getItem("rr_resume") || "");
   const [jobDescription, setJobDescription] = useState(() => sessionStorage.getItem("rr_jd") || "");
   const [loading, setLoading] = useState(false);
@@ -53,6 +54,22 @@ const Index = () => {
   // Refresh credits whenever auth state changes
   const refreshCredits = () => {
     getCreditStatus().then(setCreditStatus);
+  };
+
+  const getPendingPaidAction = () =>
+    sessionStorage.getItem(pendingActionKey) as "analyze" | "outreach" | null;
+
+  const clearPendingPaidAction = () => {
+    sessionStorage.removeItem(pendingActionKey);
+  };
+
+  const openPaywall = (action?: "analyze" | "outreach") => {
+    if (action) {
+      sessionStorage.setItem(pendingActionKey, action);
+    } else {
+      clearPendingPaidAction();
+    }
+    setShowPaywall(true);
   };
 
   useEffect(() => {
@@ -98,14 +115,57 @@ const Index = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("payment") === "success") {
-      toast.success("Payment successful! Credits have been added.");
-      refreshCredits();
+    const paymentStatus = params.get("payment");
+    if (!paymentStatus) return;
+
+    let cancelled = false;
+
+    const syncCreditsAndResumeAction = async () => {
+      if (paymentStatus === "canceled") {
+        clearPendingPaidAction();
+        toast.info("Payment was canceled.");
+        window.history.replaceState({}, "", "/");
+        return;
+      }
+
+      toast.success("Payment successful! Syncing your credits...");
+      setShowPaywall(false);
+
+      let latestStatus: CreditStatus | null = null;
+
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        latestStatus = await getCreditStatus();
+        if (cancelled) return;
+
+        setCreditStatus(latestStatus);
+        if (latestStatus.balance > 0) break;
+
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+
       window.history.replaceState({}, "", "/");
-    } else if (params.get("payment") === "canceled") {
-      toast.info("Payment was canceled.");
-      window.history.replaceState({}, "", "/");
-    }
+
+      if (!latestStatus || latestStatus.balance <= 0) {
+        toast.error("Your payment went through, but credits are still syncing. Please refresh in a moment.");
+        return;
+      }
+
+      const pendingAction = getPendingPaidAction();
+      clearPendingPaidAction();
+      toast.success(`Payment successful! ${latestStatus.balance} credits ready.`);
+
+      if (pendingAction === "analyze") {
+        await handleAnalyze(latestStatus);
+      } else if (pendingAction === "outreach") {
+        await handleOutreach(latestStatus);
+      }
+    };
+
+    syncCreditsAndResumeAction();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => { sessionStorage.setItem("rr_resume", resume); }, [resume]);
@@ -114,7 +174,9 @@ const Index = () => {
   const canSubmit = resume.trim().length > 20 && jobDescription.trim().length > 20;
   const showRadar = jobDescription.trim().length > 30 && !result;
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = async (statusOverride?: CreditStatus) => {
+    const activeCreditStatus = statusOverride ?? creditStatus;
+
     if (!user) {
       navigate("/auth");
       return;
@@ -125,8 +187,8 @@ const Index = () => {
       return;
     }
 
-    if (creditStatus.hasUsedFreeCredit && creditStatus.balance <= 0) {
-      setShowPaywall(true);
+    if (activeCreditStatus.hasUsedFreeCredit && activeCreditStatus.balance <= 0) {
+      openPaywall("analyze");
       return;
     }
 
@@ -142,13 +204,21 @@ const Index = () => {
       const targetRole = jobDescription.match(/(?:title|role|position)[:\s]+([^\n,]+)/i)?.[1]?.trim();
       saveToHistory(resume, jobDescription, data, targetRole).catch(console.error);
 
-      if (!creditStatus.hasUsedFreeCredit) {
+      if (!activeCreditStatus.hasUsedFreeCredit) {
         await markFreeCreditUsed();
-        setCreditStatus((prev) => ({ ...prev, hasUsedFreeCredit: true }));
+        setCreditStatus({
+          ...activeCreditStatus,
+          hasUsedFreeCredit: true,
+          isAuthenticated: true,
+        });
       } else {
         const { deductCredit } = await import("@/lib/credits");
         await deductCredit();
-        setCreditStatus((prev) => ({ ...prev, balance: prev.balance - 1 }));
+        setCreditStatus({
+          ...activeCreditStatus,
+          balance: Math.max(0, activeCreditStatus.balance - 1),
+          isAuthenticated: true,
+        });
       }
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
@@ -159,11 +229,13 @@ const Index = () => {
     }
   };
 
-  const handleOutreach = async () => {
+  const handleOutreach = async (statusOverride?: CreditStatus) => {
     if (!result) return;
 
-    if (creditStatus.balance <= 0) {
-      setShowPaywall(true);
+    const activeCreditStatus = statusOverride ?? creditStatus;
+
+    if (activeCreditStatus.balance <= 0) {
+      openPaywall("outreach");
       return;
     }
 
@@ -352,7 +424,9 @@ const Index = () => {
         <div className="flex justify-center">
           <Button
             id="rr-analyze-btn"
-            onClick={handleAnalyze}
+            onClick={() => {
+              void handleAnalyze();
+            }}
             disabled={!canSubmit || loading}
             size="lg"
             className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg disabled:opacity-50"
@@ -458,7 +532,7 @@ const Index = () => {
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
                 hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
-                onCreditsNeeded={() => setShowPaywall(true)}
+                 onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />
             </ResultSection>
@@ -474,7 +548,7 @@ const Index = () => {
                 jobDescription={jobDescription}
                 pivotPitch={result.pivotPitch}
                 hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
-                onCreditsNeeded={() => setShowPaywall(true)}
+                 onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />
             </ResultSection>
@@ -495,7 +569,9 @@ const Index = () => {
                     ) : null}
                   </p>
                   <Button
-                    onClick={handleOutreach}
+                    onClick={() => {
+                      void handleOutreach();
+                    }}
                     className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl shadow-[var(--shadow-elevated)]"
                   >
                     <Send className="h-4 w-4" />
@@ -516,7 +592,10 @@ const Index = () => {
       </main>
 
       <Footer />
-      <PaywallModal open={showPaywall} onClose={() => setShowPaywall(false)} />
+      <PaywallModal open={showPaywall} onClose={() => {
+        clearPendingPaidAction();
+        setShowPaywall(false);
+      }} />
     </div>
   );
 };

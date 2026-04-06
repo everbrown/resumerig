@@ -20,7 +20,22 @@ export async function getCreditStatus(): Promise<CreditStatus> {
 
   return {
     hasUsedFreeCredit: data?.has_used_free_credit ?? false,
-    balance: data?.balance ?? 5,
+    balance: data?.balance ?? 0,
+    isAuthenticated: true,
+  };
+}
+
+export async function confirmCheckoutSession(sessionId: string): Promise<CreditStatus> {
+  const { data, error } = await supabase.functions.invoke("confirm-checkout", {
+    body: { sessionId },
+  });
+
+  if (error) throw new Error(error.message || "Payment confirmation failed");
+  if (data?.error) throw new Error(data.error);
+
+  return {
+    hasUsedFreeCredit: Boolean(data?.hasUsedFreeCredit),
+    balance: Number(data?.balance ?? 0),
     isAuthenticated: true,
   };
 }

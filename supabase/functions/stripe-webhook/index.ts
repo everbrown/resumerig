@@ -28,8 +28,9 @@ serve(async (req) => {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
     const credits = parseInt(session.metadata?.credits || "0", 10);
+    const alreadyFulfilled = session.metadata?.fulfilled === "true";
 
-    if (userId && credits > 0) {
+    if (userId && credits > 0 && !alreadyFulfilled) {
       const supabaseAdmin = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -52,6 +53,14 @@ serve(async (req) => {
           .from("credit_balances")
           .insert({ user_id: userId, balance: credits, has_used_free_credit: true });
       }
+
+      await stripe.checkout.sessions.update(session.id, {
+        metadata: {
+          ...(session.metadata ?? {}),
+          fulfilled: "true",
+          fulfilled_at: new Date().toISOString(),
+        },
+      });
 
       console.log(`Added ${credits} credits for user ${userId}`);
     }

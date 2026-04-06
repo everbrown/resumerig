@@ -53,8 +53,9 @@ serve(async (req) => {
         user_id: user.id,
         credits: String(packInfo.credits),
         pack_name: pack,
+        fulfilled: "false",
       },
-      success_url: `${req.headers.get("origin")}/?payment=success`,
+      success_url: `${req.headers.get("origin")}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/?payment=canceled`,
     });
 

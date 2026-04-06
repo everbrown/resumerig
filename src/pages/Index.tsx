@@ -424,7 +424,9 @@ const Index = () => {
         <div className="flex justify-center">
           <Button
             id="rr-analyze-btn"
-            onClick={handleAnalyze}
+            onClick={() => {
+              void handleAnalyze();
+            }}
             disabled={!canSubmit || loading}
             size="lg"
             className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg disabled:opacity-50"
@@ -567,7 +569,9 @@ const Index = () => {
                     ) : null}
                   </p>
                   <Button
-                    onClick={handleOutreach}
+                    onClick={() => {
+                      void handleOutreach();
+                    }}
                     className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl shadow-[var(--shadow-elevated)]"
                   >
                     <Send className="h-4 w-4" />

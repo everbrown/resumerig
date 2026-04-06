@@ -54,7 +54,7 @@ const Dashboard = () => {
     setPurchaseLoading(pack);
     try {
       const url = await createCheckoutSession(pack);
-      window.open(url, "_blank");
+      window.location.href = url;
     } catch (err: any) {
       toast.error(err?.message || "Checkout failed");
     } finally {

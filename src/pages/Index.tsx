@@ -25,10 +25,16 @@ import ReferralPanel from "@/components/ReferralPanel";
 import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
-import { getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
+import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
 import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
 import { saveToHistory } from "@/lib/resumeHistory";
 import { redeemReferralCode } from "@/lib/referrals";
+
+const EMPTY_CREDIT_STATUS: CreditStatus = {
+  hasUsedFreeCredit: false,
+  balance: 0,
+  isAuthenticated: false,
+};
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -45,15 +51,25 @@ const Index = () => {
   const [copied, setCopied] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [needsReview, setNeedsReview] = useState(false);
-  const [creditStatus, setCreditStatus] = useState<CreditStatus>({
-    hasUsedFreeCredit: false,
-    balance: 0,
-    isAuthenticated: false,
-  });
+  const [creditStatus, setCreditStatus] = useState<CreditStatus>(EMPTY_CREDIT_STATUS);
+  const [creditLoading, setCreditLoading] = useState(true);
 
   // Refresh credits whenever auth state changes
-  const refreshCredits = () => {
-    getCreditStatus().then(setCreditStatus);
+  const refreshCredits = async () => {
+    if (!user) {
+      setCreditStatus(EMPTY_CREDIT_STATUS);
+      setCreditLoading(false);
+      return EMPTY_CREDIT_STATUS;
+    }
+
+    setCreditLoading(true);
+    try {
+      const nextStatus = await getCreditStatus();
+      setCreditStatus(nextStatus);
+      return nextStatus;
+    } finally {
+      setCreditLoading(false);
+    }
   };
 
   const getPendingPaidAction = () =>
@@ -73,7 +89,7 @@ const Index = () => {
   };
 
   useEffect(() => {
-    refreshCredits();
+    void refreshCredits();
   }, [user]);
 
   // Handle referral code from URL
@@ -116,6 +132,7 @@ const Index = () => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const paymentStatus = params.get("payment");
+    const sessionId = params.get("session_id");
     if (!paymentStatus) return;
 
     let cancelled = false;
@@ -133,14 +150,26 @@ const Index = () => {
 
       let latestStatus: CreditStatus | null = null;
 
-      for (let attempt = 0; attempt < 10; attempt += 1) {
-        latestStatus = await getCreditStatus();
-        if (cancelled) return;
+      if (sessionId) {
+        try {
+          latestStatus = await confirmCheckoutSession(sessionId);
+          if (cancelled) return;
+          setCreditStatus(latestStatus);
+          setCreditLoading(false);
+        } catch {
+          latestStatus = null;
+        }
+      }
 
-        setCreditStatus(latestStatus);
-        if (latestStatus.balance > 0) break;
+      if (!latestStatus || latestStatus.balance <= 0) {
+        for (let attempt = 0; attempt < 10; attempt += 1) {
+          latestStatus = await refreshCredits();
+          if (cancelled) return;
 
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+          if (latestStatus.balance > 0) break;
+
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
       }
 
       window.history.replaceState({}, "", "/");
@@ -175,8 +204,6 @@ const Index = () => {
   const showRadar = jobDescription.trim().length > 30 && !result;
 
   const handleAnalyze = async (statusOverride?: CreditStatus) => {
-    const activeCreditStatus = statusOverride ?? creditStatus;
-
     if (!user) {
       navigate("/auth");
       return;
@@ -186,6 +213,8 @@ const Index = () => {
       toast.warning("Please review the extracted text first and click 'Text looks good' before proceeding.");
       return;
     }
+
+    const activeCreditStatus = statusOverride ?? await refreshCredits();
 
     if (activeCreditStatus.hasUsedFreeCredit && activeCreditStatus.balance <= 0) {
       openPaywall("analyze");
@@ -232,7 +261,7 @@ const Index = () => {
   const handleOutreach = async (statusOverride?: CreditStatus) => {
     if (!result) return;
 
-    const activeCreditStatus = statusOverride ?? creditStatus;
+    const activeCreditStatus = statusOverride ?? await refreshCredits();
 
     if (activeCreditStatus.balance <= 0) {
       openPaywall("outreach");
@@ -274,11 +303,9 @@ const Index = () => {
           ) : user ? (
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-primary-foreground/60">{user.email}</span>
-              {creditStatus.balance > 0 && (
-                <span className="font-mono text-xs text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5">
-                  {creditStatus.balance} credits
-                </span>
-              )}
+              <span className="font-mono text-xs text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5">
+                {creditLoading ? "Syncing credits..." : `${creditStatus.balance} credit${creditStatus.balance !== 1 ? "s" : ""}`}
+              </span>
               <button
                 onClick={() => navigate("/dashboard")}
                 className="flex items-center gap-1 text-xs font-body text-primary-foreground/60 hover:text-primary-foreground transition-colors"
@@ -342,6 +369,32 @@ const Index = () => {
             <p className="mt-4 font-body text-base sm:text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
                Your experience is elite, but <strong className="text-primary-foreground font-semibold">recruiters won't connect the dots for you.</strong> Stop letting ATS (Application Tracking System) filters ignore your potential. Resume Rig identifies your target domain and <strong className="text-primary-foreground font-semibold">hard-codes your professional data</strong> to speak its language.
             </p>
+             {user && (
+               <div className="mx-auto mt-6 max-w-xl rounded-2xl border border-secondary/30 bg-background/10 p-5 text-left shadow-[var(--shadow-elevated)] backdrop-blur-sm">
+                 <div className="flex items-start justify-between gap-4">
+                   <div>
+                     <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary-foreground/60">
+                       Available Career Credits
+                     </p>
+                     <p className="mt-2 font-display text-4xl font-bold text-primary-foreground">
+                       {creditLoading ? "..." : creditStatus.balance}
+                     </p>
+                   </div>
+                   <div className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-mono text-secondary">
+                     {creditLoading ? "Checking balance" : `${creditStatus.balance} ready`}
+                   </div>
+                 </div>
+                 <p className="mt-3 font-body text-sm text-primary-foreground/70">
+                   {creditLoading
+                     ? "Checking your latest balance now."
+                     : creditStatus.balance > 0
+                       ? "You have credits available, so you should go straight into the operation without seeing the paywall."
+                       : creditStatus.hasUsedFreeCredit
+                         ? "You’re out of credits right now, so the paywall will only appear when you try to run another operation."
+                         : "Your first alignment is still available for free."}
+                 </p>
+               </div>
+             )}
             <Button
               onClick={() => document.getElementById('resume-input-section')?.scrollIntoView({ behavior: 'smooth' })}
               size="lg"

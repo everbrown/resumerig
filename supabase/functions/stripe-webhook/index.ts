@@ -62,6 +62,9 @@ serve(async (req) => {
         },
       });
 
+      // Fulfill referral bonus if applicable
+      await supabaseAdmin.rpc("fulfill_referral_bonus", { p_user_id: userId });
+
       console.log(`Added ${credits} credits for user ${userId}`);
     }
   }

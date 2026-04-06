@@ -217,21 +217,30 @@ export type Database = {
       referral_redemptions: {
         Row: {
           created_at: string
+          device_fingerprint: string | null
           id: string
+          ip_address: string | null
           redeemed_by: string
           referral_code_id: string
+          status: string
         }
         Insert: {
           created_at?: string
+          device_fingerprint?: string | null
           id?: string
+          ip_address?: string | null
           redeemed_by: string
           referral_code_id: string
+          status?: string
         }
         Update: {
           created_at?: string
+          device_fingerprint?: string | null
           id?: string
+          ip_address?: string | null
           redeemed_by?: string
           referral_code_id?: string
+          status?: string
         }
         Relationships: [
           {
@@ -326,6 +335,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      fulfill_referral_bonus: { Args: { p_user_id: string }; Returns: boolean }
       move_to_dlq: {
         Args: {
           dlq_name: string

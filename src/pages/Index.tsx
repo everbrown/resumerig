@@ -21,7 +21,7 @@ import Footer from "@/components/Footer";
 import BeforeAfterShowcase from "@/components/BeforeAfterShowcase";
 import ATSScore from "@/components/ATSScore";
 import CoverLetterPanel from "@/components/CoverLetterPanel";
-import ReferralPanel from "@/components/ReferralPanel";
+import FuelLoop from "@/components/FuelLoop";
 import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
@@ -102,7 +102,7 @@ const Index = () => {
         sessionStorage.setItem("rr_ref_tried", refCode);
         redeemReferralCode(refCode).then((result) => {
           if (result === "success") {
-            toast.success("Referral code redeemed! You earned 1 free credit. 🎉");
+            toast.success("Referral registered! You'll earn 3 bonus domain credits after your first purchase. 🎉");
             refreshCredits();
           }
         }).catch(() => {});
@@ -121,7 +121,7 @@ const Index = () => {
         sessionStorage.removeItem("rr_pending_ref");
         redeemReferralCode(pending).then((result) => {
           if (result === "success") {
-            toast.success("Referral code redeemed! You earned 1 free credit. 🎉");
+            toast.success("Referral registered! You'll earn 3 bonus domain credits after your first purchase. 🎉");
             refreshCredits();
           }
         }).catch(() => {});
@@ -636,9 +636,9 @@ const Index = () => {
               {outreachResult && <OutreachPanel result={outreachResult} />}
             </ResultSection>
 
-            {/* Referral panel after results */}
+            {/* Fuel Loop panel after results */}
             {user && (
-              <ReferralPanel isAuthenticated={true} onCreditsChanged={refreshCredits} />
+              <FuelLoop isAuthenticated={true} creditBalance={creditStatus.balance} onCreditsChanged={refreshCredits} />
             )}
           </div>
         )}

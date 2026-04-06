@@ -7,7 +7,7 @@ import { getCreditStatus, createCheckoutSession, type CreditStatus } from "@/lib
 import { Clock, Trash2, ArrowLeft, Eye, Sparkles, Zap, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import ReferralPanel from "@/components/ReferralPanel";
+import FuelLoop from "@/components/FuelLoop";
 import Footer from "@/components/Footer";
 
 const Dashboard = () => {
@@ -143,7 +143,7 @@ const Dashboard = () => {
         )}
 
         {/* Referral Panel */}
-        <ReferralPanel isAuthenticated={!!user} onCreditsChanged={refreshCredits} />
+        <FuelLoop isAuthenticated={!!user} creditBalance={creditStatus.balance} onCreditsChanged={refreshCredits} />
 
         {/* History */}
         <div className="space-y-4">

@@ -247,7 +247,21 @@ const Index = () => {
               AI-Powered Resume Translator
             </div>
             
-            <h1 className="font-display text-5xl font-bold tracking-tight text-primary-foreground sm:text-6xl lg:text-8xl">
+            <h1
+              className="font-display text-5xl font-bold tracking-tight text-primary-foreground sm:text-6xl lg:text-8xl cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={() => {
+                setResume("");
+                setJobDescription("");
+                setResult(null);
+                setOutreachResult(null);
+                setError("");
+                setNeedsReview(false);
+                setCopied(false);
+                sessionStorage.removeItem("rr_resume");
+                sessionStorage.removeItem("rr_jd");
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
               Resume<span className="text-secondary">Rig</span>
             </h1>
             <h2 className="mt-4 font-display text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-primary-foreground leading-tight max-w-3xl mx-auto">

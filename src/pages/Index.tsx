@@ -500,7 +500,7 @@ const Index = () => {
           <div className="space-y-10 pb-16">
             {/* ATS Score + Match Score side by side */}
             <div className="grid gap-6 md:grid-cols-2">
-              <MatchScore beforeScore={result.beforeScore} afterScore={result.afterScore} />
+              <MatchScore beforeScore={result.beforeScore} afterScore={result.afterScore} beforeBreakdown={result.beforeBreakdown} afterBreakdown={result.afterBreakdown} />
               <ATSScore beforeScore={result.beforeScore} afterScore={result.afterScore} />
             </div>
 

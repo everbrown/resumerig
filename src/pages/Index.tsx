@@ -214,12 +214,12 @@ const Index = () => {
       return;
     }
 
-    const activeCreditStatus = statusOverride ?? await refreshCredits();
-
-    if (activeCreditStatus.hasUsedFreeCredit && activeCreditStatus.balance <= 0) {
-      openPaywall("analyze");
-      return;
-    }
+    // TEMP: Credit checks paused for testing
+    // const activeCreditStatus = statusOverride ?? await refreshCredits();
+    // if (activeCreditStatus.hasUsedFreeCredit && activeCreditStatus.balance <= 0) {
+    //   openPaywall("analyze");
+    //   return;
+    // }
 
     setLoading(true);
     setError("");
@@ -233,22 +233,8 @@ const Index = () => {
       const targetRole = jobDescription.match(/(?:title|role|position)[:\s]+([^\n,]+)/i)?.[1]?.trim();
       saveToHistory(resume, jobDescription, data, targetRole).catch(console.error);
 
-      if (!activeCreditStatus.hasUsedFreeCredit) {
-        await markFreeCreditUsed();
-        setCreditStatus({
-          ...activeCreditStatus,
-          hasUsedFreeCredit: true,
-          isAuthenticated: true,
-        });
-      } else {
-        const { deductCredit } = await import("@/lib/credits");
-        await deductCredit();
-        setCreditStatus({
-          ...activeCreditStatus,
-          balance: Math.max(0, activeCreditStatus.balance - 1),
-          isAuthenticated: true,
-        });
-      }
+      // TEMP: Skip credit deduction for testing
+      // if (!activeCreditStatus.hasUsedFreeCredit) { ... }
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
       setError(msg);

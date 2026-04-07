@@ -266,8 +266,34 @@ serve(async (req) => {
               parameters: {
                 type: "object",
                 properties: {
-                  beforeScore: { type: "number", description: "Score 1-100 of original resume match" },
-                  afterScore: { type: "number", description: "Score 1-100 of rewritten resume match" },
+                  beforeScore: { type: "number", description: "Weighted score 1-100 of original resume match, computed from the 5-dimension rubric" },
+                  afterScore: { type: "number", description: "Weighted score 1-100 of rewritten resume match, computed from the 5-dimension rubric" },
+                  beforeBreakdown: {
+                    type: "object",
+                    properties: {
+                      keywordMatch: { type: "number", description: "0-100 score for keyword match dimension on the ORIGINAL resume" },
+                      skillsCoverage: { type: "number", description: "0-100 score for skills coverage dimension on the ORIGINAL resume" },
+                      quantification: { type: "number", description: "0-100 score for quantification density on the ORIGINAL resume" },
+                      toneAlignment: { type: "number", description: "0-100 score for tone/vocabulary alignment on the ORIGINAL resume" },
+                      formatCompliance: { type: "number", description: "0-100 score for format compliance on the ORIGINAL resume" },
+                    },
+                    required: ["keywordMatch", "skillsCoverage", "quantification", "toneAlignment", "formatCompliance"],
+                    additionalProperties: false,
+                    description: "Per-dimension scores for the ORIGINAL resume. beforeScore = keyword*0.3 + skills*0.25 + quant*0.2 + tone*0.15 + format*0.1",
+                  },
+                  afterBreakdown: {
+                    type: "object",
+                    properties: {
+                      keywordMatch: { type: "number", description: "0-100 score for keyword match dimension on the REWRITTEN resume" },
+                      skillsCoverage: { type: "number", description: "0-100 score for skills coverage dimension on the REWRITTEN resume" },
+                      quantification: { type: "number", description: "0-100 score for quantification density on the REWRITTEN resume" },
+                      toneAlignment: { type: "number", description: "0-100 score for tone/vocabulary alignment on the REWRITTEN resume" },
+                      formatCompliance: { type: "number", description: "0-100 score for format compliance on the REWRITTEN resume" },
+                    },
+                    required: ["keywordMatch", "skillsCoverage", "quantification", "toneAlignment", "formatCompliance"],
+                    additionalProperties: false,
+                    description: "Per-dimension scores for the REWRITTEN resume. afterScore = keyword*0.3 + skills*0.25 + quant*0.2 + tone*0.15 + format*0.1",
+                  },
                   translatorTable: {
                     type: "array",
                     items: {
@@ -307,7 +333,7 @@ serve(async (req) => {
                     description: "List of job titles where a more industry-aligned alternative is suggested. Can be empty if no changes needed.",
                   },
                 },
-                required: ["beforeScore", "afterScore", "translatorTable", "originalBullets", "tunedBullets", "tunedResume", "pivotPitch", "titleChanges"],
+                required: ["beforeScore", "afterScore", "beforeBreakdown", "afterBreakdown", "translatorTable", "originalBullets", "tunedBullets", "tunedResume", "pivotPitch", "titleChanges"],
                 additionalProperties: false,
               },
             },

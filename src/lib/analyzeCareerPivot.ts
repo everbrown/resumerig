@@ -5,9 +5,19 @@ export interface TitleChange {
   suggestedTitle: string;
 }
 
+export interface ScoreBreakdown {
+  keywordMatch: number;
+  skillsCoverage: number;
+  quantification: number;
+  toneAlignment: number;
+  formatCompliance: number;
+}
+
 export interface AnalysisResult {
   beforeScore: number;
   afterScore: number;
+  beforeBreakdown?: ScoreBreakdown;
+  afterBreakdown?: ScoreBreakdown;
   translatorTable: { oldTerm: string; newTerm: string }[];
   originalBullets: string[];
   tunedBullets: string[];

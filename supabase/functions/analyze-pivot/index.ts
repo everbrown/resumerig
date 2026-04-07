@@ -41,6 +41,39 @@ QUALITY CHECK — Before returning, verify each rewritten bullet against these c
 4. Would the person be able to discuss this confidently in an interview?
 5. Is it substantively different from the original, not just a verb swap?
 
+SCORING RUBRIC — Use this exact weighted rubric to compute beforeScore and afterScore (both 1-100). Score each dimension independently, then compute the weighted total. Be rigorous and consistent.
+
+1. Keyword Match (30% weight):
+   - Extract the top 15-20 critical keywords/phrases from the JD (hard skills, tools, technologies, methodologies, certifications).
+   - Count how many appear verbatim or as close synonyms in the resume.
+   - Score: (matched keywords / total critical keywords) × 100.
+   - Example: 4 of 15 keywords matched = 27. 13 of 15 = 87.
+
+2. Skills Coverage (25% weight):
+   - Identify all required AND preferred skills/competencies from the JD.
+   - Assess what percentage of those skills are demonstrably evidenced (not just listed) in the resume through bullets or descriptions.
+   - Score: (skills evidenced / total JD skills) × 100.
+
+3. Quantification Density (20% weight):
+   - Count the total number of bullet points in the resume.
+   - Count how many contain measurable impact (numbers, percentages, dollar amounts, team sizes, timelines, volumes).
+   - Score: (quantified bullets / total bullets) × 100.
+
+4. Tone & Vocabulary Alignment (15% weight):
+   - Assess how closely the resume's linguistic register mirrors the JD's vocabulary and phrasing style.
+   - 0-25: Completely different domain language, no JD vocabulary present.
+   - 26-50: Some overlap but mostly source-domain jargon remains.
+   - 51-75: Moderate alignment, key JD terms used but inconsistently.
+   - 76-100: Strong mirror of JD's exact phrasing, methodology names, and value propositions throughout.
+
+5. Format Compliance (10% weight):
+   - Check: clear section headings, consistent bullet formatting, job entries with title|company|dates on one line, no orphaned dates, logical section order, appropriate length.
+   - Deduct points for each formatting issue. Well-formatted = 90-100. Minor issues = 70-89. Significant issues = below 70.
+
+FINAL SCORE = (Keyword × 0.30) + (Skills × 0.25) + (Quantification × 0.20) + (Tone × 0.15) + (Format × 0.10)
+
+Round to the nearest integer. The beforeScore reflects the ORIGINAL resume against the JD. The afterScore reflects the REWRITTEN tunedResume against the JD. Both must use the same rubric for a fair comparison.
+
 FORMATTING RULES FOR tunedResume:
 - Use clear section headings in ALL CAPS on their own line (e.g. SUMMARY, EXPERIENCE, EDUCATION, SKILLS, CERTIFICATIONS).
 - Add a blank line before each section heading.

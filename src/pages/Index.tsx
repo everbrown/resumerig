@@ -25,7 +25,7 @@ import FuelLoop from "@/components/FuelLoop";
 import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
-import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
+import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, deductCredit, type CreditStatus } from "@/lib/credits";
 import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
 import { saveToHistory } from "@/lib/resumeHistory";
 import { redeemReferralCode } from "@/lib/referrals";

@@ -25,7 +25,7 @@ import FuelLoop from "@/components/FuelLoop";
 import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
-import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, type CreditStatus } from "@/lib/credits";
+import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, deductCredit, type CreditStatus } from "@/lib/credits";
 import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
 import { saveToHistory } from "@/lib/resumeHistory";
 import { redeemReferralCode } from "@/lib/referrals";
@@ -214,12 +214,11 @@ const Index = () => {
       return;
     }
 
-    // TEMP: Credit checks paused for testing
-    // const activeCreditStatus = statusOverride ?? await refreshCredits();
-    // if (activeCreditStatus.hasUsedFreeCredit && activeCreditStatus.balance <= 0) {
-    //   openPaywall("analyze");
-    //   return;
-    // }
+    const activeCreditStatus = statusOverride ?? await refreshCredits();
+    if (activeCreditStatus.hasUsedFreeCredit && activeCreditStatus.balance <= 0) {
+      openPaywall("analyze");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -233,8 +232,11 @@ const Index = () => {
       const targetRole = jobDescription.match(/(?:title|role|position)[:\s]+([^\n,]+)/i)?.[1]?.trim();
       saveToHistory(resume, jobDescription, data, targetRole).catch(console.error);
 
-      // TEMP: Skip credit deduction for testing
-      // if (!activeCreditStatus.hasUsedFreeCredit) { ... }
+      if (!activeCreditStatus.hasUsedFreeCredit) {
+        await markFreeCreditUsed();
+      } else {
+        await deductCredit();
+      }
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
       setError(msg);

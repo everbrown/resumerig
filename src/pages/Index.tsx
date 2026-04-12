@@ -392,6 +392,15 @@ const Index = () => {
               HARD-CODE MY FIRST RESUME — FREE
               <ArrowRight className="h-5 w-5" />
             </Button>
+            {/* Anonymous bullet preview */}
+            {!user && (
+              <BulletPreview
+                onWantMore={() => {
+                  const el = document.getElementById('resume-input-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
+            )}
           </motion.div>
         </div>
       </header>

@@ -1,0 +1,139 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const SYSTEM_PROMPT = `You are a Career Domain Translator. Given a single resume bullet point and optionally a target role/industry, produce a "Domain Alignment Key" — a table of 3-5 term translations showing how the candidate's existing language maps to the target domain's language.
+
+For each translation:
+- "oldTerm": the phrase/concept from the original bullet
+- "newTerm": the equivalent phrase a recruiter in the target domain would recognize
+- "why": a brief 1-sentence explanation of why this mapping works
+
+Also produce "tunedBullet" — the rewritten version of the bullet using the target domain language. It must be truthful (describe what the person actually did, just in new language).
+
+IMPORTANT: You MUST respond by calling the provided function tool. Do NOT return plain text.`;
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { bullet, targetRole } = await req.json();
+
+    if (!bullet || typeof bullet !== "string" || bullet.trim().length < 10) {
+      return new Response(
+        JSON.stringify({ error: "Please provide a bullet point (at least 10 characters)." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (bullet.trim().length > 500) {
+      return new Response(
+        JSON.stringify({ error: "Bullet point too long. Keep it under 500 characters." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "API key not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const targetContext = targetRole
+      ? `\nTarget role/industry: ${targetRole}`
+      : "\nTarget: general tech/business domain";
+
+    const userPrompt = `Resume bullet point:\n"${bullet.trim()}"${targetContext}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        max_tokens: 2048,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "return_preview",
+              description: "Return the bullet point domain alignment preview",
+              parameters: {
+                type: "object",
+                properties: {
+                  translations: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        oldTerm: { type: "string" },
+                        newTerm: { type: "string" },
+                        why: { type: "string" },
+                      },
+                      required: ["oldTerm", "newTerm", "why"],
+                      additionalProperties: false,
+                    },
+                    description: "3-5 term translations from source domain to target domain",
+                  },
+                  tunedBullet: {
+                    type: "string",
+                    description: "The rewritten bullet using target domain language",
+                  },
+                },
+                required: ["translations", "tunedBullet"],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: "function", function: { name: "return_preview" } },
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      return new Response(
+        JSON.stringify({ error: "AI service temporarily unavailable. Please try again." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const completion = await response.json();
+    const toolCall = completion.choices?.[0]?.message?.tool_calls?.[0];
+
+    if (!toolCall?.function?.arguments) {
+      console.error("No tool call in response:", JSON.stringify(completion));
+      return new Response(
+        JSON.stringify({ error: "Failed to generate preview. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const result = JSON.parse(toolCall.function.arguments);
+
+    return new Response(JSON.stringify(result), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    console.error("preview-bullet error:", err);
+    return new Response(
+      JSON.stringify({ error: "Something went wrong. Please try again." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

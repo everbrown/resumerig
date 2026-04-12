@@ -22,6 +22,7 @@ import BeforeAfterShowcase from "@/components/BeforeAfterShowcase";
 import ATSScore from "@/components/ATSScore";
 import CoverLetterPanel from "@/components/CoverLetterPanel";
 import FuelLoop from "@/components/FuelLoop";
+import BulletPreview from "@/components/BulletPreview";
 import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
@@ -391,6 +392,15 @@ const Index = () => {
               HARD-CODE MY FIRST RESUME — FREE
               <ArrowRight className="h-5 w-5" />
             </Button>
+            {/* Anonymous bullet preview */}
+            {!user && (
+              <BulletPreview
+                onWantMore={() => {
+                  const el = document.getElementById('resume-input-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
+            )}
           </motion.div>
         </div>
       </header>

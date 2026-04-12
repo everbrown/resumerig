@@ -22,6 +22,7 @@ import BeforeAfterShowcase from "@/components/BeforeAfterShowcase";
 import ATSScore from "@/components/ATSScore";
 import CoverLetterPanel from "@/components/CoverLetterPanel";
 import FuelLoop from "@/components/FuelLoop";
+import BulletPreview from "@/components/BulletPreview";
 import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";

@@ -139,14 +139,16 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
             {limitReached && (
               <div className="rounded-lg border border-secondary/40 bg-secondary/10 p-3 text-center space-y-2">
                 <p className="text-sm font-body text-primary-foreground">
-                  You've used all <strong className="text-secondary">3 free alignments</strong>. Sign up to align your full resume.
+                  {serverLocked
+                    ? "This device has reached its free alignment limit. Upgrade to the Bypass Pack to continue."
+                    : <>You've used all <strong className="text-secondary">3 free alignments</strong>. Sign up to align your full resume.</>}
                 </p>
                 <Button
                   onClick={onWantMore}
                   size="sm"
                   className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl"
                 >
-                  Sign Up & Align Full Resume
+                  {serverLocked ? "Get the Bypass Pack" : "Sign Up & Align Full Resume"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>

@@ -18,6 +18,16 @@ Also produce "tunedBullet" — the rewritten version of the bullet using the tar
 
 IMPORTANT: You MUST respond by calling the provided function tool. Do NOT return plain text.`;
 
+// Owner/test accounts — bypass all anti-abuse checks.
+const ABUSE_ALLOWLIST = new Set<string>([
+  "djcoolmike@gmail.com",
+]);
+
+function isAllowlisted(email: unknown): boolean {
+  if (typeof email !== "string") return false;
+  return ABUSE_ALLOWLIST.has(email.trim().toLowerCase());
+}
+
 function getClientIp(req: Request): string | null {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {

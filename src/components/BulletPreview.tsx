@@ -21,17 +21,24 @@ interface BulletPreviewProps {
   onWantMore: () => void;
 }
 
+const FREE_LIMIT = 3;
+const STORAGE_KEY = "rr_preview_count";
+
 const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
   const [bullet, setBullet] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [error, setError] = useState("");
-  const [hasUsedPreview, setHasUsedPreview] = useState(
-    () => sessionStorage.getItem("rr_preview_used") === "true"
-  );
+  const [usedCount, setUsedCount] = useState(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const n = raw ? parseInt(raw, 10) : 0;
+    return Number.isFinite(n) ? n : 0;
+  });
 
-  const canSubmit = bullet.trim().length >= 10 && !loading && !hasUsedPreview;
+  const remaining = Math.max(0, FREE_LIMIT - usedCount);
+  const limitReached = remaining <= 0;
+  const canSubmit = bullet.trim().length >= 10 && !loading && !limitReached;
 
   const handlePreview = async () => {
     if (!canSubmit) return;
@@ -49,13 +56,20 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
       if (data?.error) throw new Error(data.error);
 
       setResult(data as PreviewResult);
-      setHasUsedPreview(true);
-      sessionStorage.setItem("rr_preview_used", "true");
+      const next = usedCount + 1;
+      setUsedCount(next);
+      localStorage.setItem(STORAGE_KEY, String(next));
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTryAnother = () => {
+    setResult(null);
+    setBullet("");
+    setError("");
   };
 
   return (

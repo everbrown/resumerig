@@ -52,11 +52,20 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseLike = any
+
+interface QueueMessage {
+  msg_id: number
+  read_ct: number
+  message: Record<string, any>
+}
+
 // Move a message to the dead letter queue and log the reason.
 async function moveToDlq(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseLike,
   queue: string,
-  msg: { msg_id: number; message: Record<string, unknown> },
+  msg: QueueMessage,
   reason: string
 ): Promise<void> {
   const payload = msg.message
@@ -155,13 +164,13 @@ Deno.serve(async (req) => {
     // messages not attempted when a 429 stops processing early.
     const messageIds = Array.from(
       new Set(
-        messages
-          .map((msg) =>
+        (messages as QueueMessage[])
+          .map((msg: QueueMessage) =>
             msg?.message?.message_id && typeof msg.message.message_id === 'string'
-              ? msg.message.message_id
+              ? (msg.message.message_id as string)
               : null
           )
-          .filter((id): id is string => Boolean(id))
+          .filter((id: string | null): id is string => Boolean(id))
       )
     )
     const failedAttemptsByMessageId = new Map<string, number>()

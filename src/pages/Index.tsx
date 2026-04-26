@@ -219,7 +219,10 @@ const Index = () => {
     }
 
     const activeCreditStatus = statusOverride ?? await refreshCredits();
-    if (activeCreditStatus.hasUsedFreeCredit && activeCreditStatus.balance <= 0) {
+    const hasFirstFree = !activeCreditStatus.hasUsedFreeCredit;
+    const hasAccess = activeCreditStatus.hasActivePass || activeCreditStatus.balance > 0 || hasFirstFree;
+
+    if (!hasAccess) {
       openPaywall("analyze");
       return;
     }
@@ -236,11 +239,16 @@ const Index = () => {
       const targetRole = jobDescription.match(/(?:title|role|position)[:\s]+([^\n,]+)/i)?.[1]?.trim();
       saveToHistory(resume, jobDescription, data, targetRole).catch(console.error);
 
-      if (!activeCreditStatus.hasUsedFreeCredit) {
+      // Pass active = unlimited, no consumption
+      if (activeCreditStatus.hasActivePass) {
+        // no-op
+      } else if (hasFirstFree) {
         await markFreeCreditUsed();
       } else {
         await deductCredit();
       }
+      // Refresh status to reflect any change
+      void refreshCredits();
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
       setError(msg);

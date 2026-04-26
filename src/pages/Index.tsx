@@ -521,7 +521,7 @@ const Index = () => {
             size="lg"
             className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg disabled:opacity-50"
           >
-            HARD-CODE MY FIRST RESUME — FREE
+            {creditStatus.hasActivePass ? "ALIGN MY RESUME" : creditStatus.hasUsedFreeCredit ? "ALIGN — UNLOCK FOR $1.99" : "HARD-CODE MY RESUME — FREE"}
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>
@@ -586,32 +586,52 @@ const Index = () => {
                   variant="outline"
                   className="gap-2 font-body"
                   onClick={async () => {
+                    if (creditStatus.exportsRemaining <= 0) {
+                      openPaywall("export");
+                      return;
+                    }
                     try {
+                      const remaining = await consumeExport();
+                      if (remaining < 0) {
+                        openPaywall("export");
+                        return;
+                      }
                       await downloadAsDocx(result.tunedResume);
                       toast.success("DOCX downloaded!");
+                      void refreshCredits();
                     } catch {
                       toast.error("Failed to generate DOCX");
                     }
                   }}
                 >
                   <FileDown className="h-4 w-4" />
-                  Download .docx
+                  Download .docx{creditStatus.exportsRemaining > 0 ? ` (${creditStatus.exportsRemaining} left)` : ""}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="gap-2 font-body"
-                  onClick={() => {
+                  onClick={async () => {
+                    if (creditStatus.exportsRemaining <= 0) {
+                      openPaywall("export");
+                      return;
+                    }
                     try {
+                      const remaining = await consumeExport();
+                      if (remaining < 0) {
+                        openPaywall("export");
+                        return;
+                      }
                       downloadAsPdf(result.tunedResume);
                       toast.success("PDF downloaded!");
+                      void refreshCredits();
                     } catch {
                       toast.error("Failed to generate PDF");
                     }
                   }}
                 >
                   <Download className="h-4 w-4" />
-                  Download .pdf
+                  Download .pdf{creditStatus.exportsRemaining > 0 ? ` (${creditStatus.exportsRemaining} left)` : ""}
                 </Button>
               </div>
             </ResultSection>
@@ -621,7 +641,7 @@ const Index = () => {
               <OnePageResume
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
-                hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                hasCredits={creditStatus.hasActivePass || creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
                  onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />
@@ -637,7 +657,7 @@ const Index = () => {
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
                 pivotPitch={result.pivotPitch}
-                hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                hasCredits={creditStatus.hasActivePass || creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
                  onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />
@@ -682,10 +702,14 @@ const Index = () => {
       </main>
 
       <Footer />
-      <PaywallModal open={showPaywall} onClose={() => {
-        clearPendingPaidAction();
-        setShowPaywall(false);
-      }} />
+      <PaywallModal
+        open={showPaywall}
+        reason={paywallReason}
+        onClose={() => {
+          clearPendingPaidAction();
+          setShowPaywall(false);
+        }}
+      />
     </div>
   );
 };

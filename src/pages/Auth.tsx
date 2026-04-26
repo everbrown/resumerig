@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { storeReferralCode } from "@/lib/referrals";
+import { isDisposableEmail } from "@/lib/abuse";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";

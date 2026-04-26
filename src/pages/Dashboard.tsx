@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getHistory, deleteHistoryEntry, type ResumeHistoryEntry } from "@/lib/resumeHistory";
 import { getCreditStatus, createCheckoutSession, type CreditStatus } from "@/lib/credits";
-import { Clock, Trash2, ArrowLeft, Eye, Sparkles, Zap, Crown } from "lucide-react";
+import { Clock, Trash2, ArrowLeft, Eye, Sparkles, Coffee, Infinity as InfinityIcon, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import FuelLoop from "@/components/FuelLoop";
@@ -15,11 +15,14 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [history, setHistory] = useState<ResumeHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [purchaseLoading, setPurchaseLoading] = useState<string | null>(null);
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
   const [creditStatus, setCreditStatus] = useState<CreditStatus>({
     hasUsedFreeCredit: false,
     balance: 0,
     isAuthenticated: false,
+    passExpiresAt: null,
+    exportsRemaining: 0,
+    hasActivePass: false,
   });
 
   useEffect(() => {
@@ -50,17 +53,21 @@ const Dashboard = () => {
     getCreditStatus().then(setCreditStatus);
   };
 
-  const handlePurchase = async (pack: "starter" | "power") => {
-    setPurchaseLoading(pack);
+  const handlePurchase = async () => {
+    setPurchaseLoading(true);
     try {
-      const url = await createCheckoutSession(pack);
+      const url = await createCheckoutSession("bypass");
       window.location.href = url;
     } catch (err: any) {
       toast.error(err?.message || "Checkout failed");
     } finally {
-      setPurchaseLoading(null);
+      setPurchaseLoading(false);
     }
   };
+
+  const passLabel = creditStatus.hasActivePass && creditStatus.passExpiresAt
+    ? `Pass active until ${new Date(creditStatus.passExpiresAt).toLocaleString()}`
+    : "No active pass";
 
   if (authLoading || loading) {
     return (
@@ -89,53 +96,58 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`font-mono text-sm ${creditStatus.balance > 0 ? 'text-secondary' : 'text-muted-foreground'} bg-secondary/10 border border-secondary/30 rounded-full px-3 py-1`}>
-              {creditStatus.balance} credit{creditStatus.balance !== 1 ? "s" : ""}
+            <span className={`font-mono text-sm ${creditStatus.hasActivePass ? 'text-secondary' : 'text-muted-foreground'} bg-secondary/10 border border-secondary/30 rounded-full px-3 py-1`}>
+              {creditStatus.hasActivePass ? "24h Pass Active" : "No Pass"}
+            </span>
+            <span className="font-mono text-xs text-muted-foreground bg-muted/40 border border-border rounded-full px-2 py-1">
+              {creditStatus.exportsRemaining} export{creditStatus.exportsRemaining !== 1 ? "s" : ""}
             </span>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-10 space-y-8">
-        {/* Buy Credits Section */}
-        {creditStatus.balance <= 0 && creditStatus.hasUsedFreeCredit && (
+        {/* Pass status / Buy Bypass Section */}
+        {creditStatus.hasActivePass ? (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border-2 border-secondary/40 bg-secondary/5 p-6"
+          >
+            <div className="flex items-start gap-4">
+              <InfinityIcon className="h-8 w-8 text-secondary shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-display text-lg font-bold text-foreground">Unlimited alignments active</h3>
+                <p className="font-body text-sm text-muted-foreground mt-1">{passLabel}</p>
+                <p className="font-mono text-xs text-secondary mt-2">
+                  {creditStatus.exportsRemaining} export{creditStatus.exportsRemaining !== 1 ? "s" : ""} remaining
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="rounded-2xl border-2 border-secondary/30 bg-secondary/5 p-6"
           >
             <div className="text-center mb-5">
-              <h3 className="font-display text-lg font-bold text-foreground">Need more credits?</h3>
+              <Coffee className="h-8 w-8 text-secondary mx-auto mb-2" />
+              <h3 className="font-display text-lg font-bold text-foreground">Need to align your full resume?</h3>
               <p className="font-body text-sm text-muted-foreground mt-1">
-                Unlock more refinements, cover letters, and outreach messages.
+                Unlock unlimited alignments for 24 hours + 1 full export.
               </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 max-w-md mx-auto">
+            <div className="max-w-xs mx-auto">
               <button
-                onClick={() => handlePurchase("starter")}
-                disabled={purchaseLoading !== null}
-                className="rounded-xl border border-border bg-card p-4 text-center space-y-1 hover:border-secondary/50 transition-colors"
+                onClick={handlePurchase}
+                disabled={purchaseLoading}
+                className="w-full rounded-xl border-2 border-secondary bg-card p-5 text-center space-y-2 hover:bg-secondary/5 transition-colors"
               >
-                <Zap className="h-6 w-6 text-secondary mx-auto" />
-                <p className="font-display text-lg font-bold text-foreground">$9</p>
-                <p className="text-xs font-body text-muted-foreground">3 Credits</p>
-                <span className="inline-block mt-1 text-xs font-mono text-secondary bg-secondary/10 px-2 py-0.5 rounded-full">
-                  {purchaseLoading === "starter" ? "Redirecting..." : "Unlock Full Alignment"}
-                </span>
-              </button>
-              <button
-                onClick={() => handlePurchase("power")}
-                disabled={purchaseLoading !== null}
-                className="rounded-xl border-2 border-secondary bg-card p-4 text-center space-y-1 relative"
-              >
-                <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-secondary text-secondary-foreground text-[10px] font-mono font-bold px-2 py-0.5 rounded-full">
-                  BEST VALUE
-                </span>
-                <Crown className="h-6 w-6 text-secondary mx-auto" />
-                <p className="font-display text-lg font-bold text-foreground">$27</p>
-                <p className="text-xs font-body text-muted-foreground">12 Credits</p>
-                <span className="inline-block mt-1 text-xs font-mono text-secondary bg-secondary/10 px-2 py-0.5 rounded-full">
-                  {purchaseLoading === "power" ? "Redirecting..." : "Best Value"}
+                <p className="font-display text-3xl font-bold text-foreground">$1.99</p>
+                <p className="text-xs font-body text-muted-foreground">24h Bypass + 1 export</p>
+                <span className="inline-block mt-1 text-xs font-mono text-secondary bg-secondary/10 px-3 py-1 rounded-full">
+                  {purchaseLoading ? "Redirecting..." : "Get Bypass"}
                 </span>
               </button>
             </div>

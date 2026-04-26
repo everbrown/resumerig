@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { storeReferralCode } from "@/lib/referrals";
+import { isDisposableEmail } from "@/lib/abuse";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,13 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Block disposable emails on signup and password reset.
+    if (view !== "login" && isDisposableEmail(email)) {
+      toast.error("Please use a real email address (Gmail, Outlook, iCloud, or your work email).");
+      return;
+    }
+
     setLoading(true);
 
     try {

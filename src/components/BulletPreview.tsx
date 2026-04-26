@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ArrowRight, Loader2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { getFingerprint, hasUsedFreeTrial, markTrialUsed } from "@/lib/abuse";
 
 interface Translation {
   oldTerm: string;
@@ -30,14 +31,21 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [error, setError] = useState("");
+  const [serverLocked, setServerLocked] = useState(false);
   const [usedCount, setUsedCount] = useState(() => {
+    if (hasUsedFreeTrial()) return FREE_LIMIT;
     const raw = localStorage.getItem(STORAGE_KEY);
     const n = raw ? parseInt(raw, 10) : 0;
     return Number.isFinite(n) ? n : 0;
   });
 
+  // Warm up fingerprint on mount so it's ready when user submits.
+  useEffect(() => {
+    getFingerprint().catch(() => {});
+  }, []);
+
   const remaining = Math.max(0, FREE_LIMIT - usedCount);
-  const limitReached = remaining <= 0;
+  const limitReached = remaining <= 0 || serverLocked;
   const canSubmit = bullet.trim().length >= 10 && !loading && !limitReached;
 
   const handlePreview = async () => {
@@ -48,17 +56,30 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
     setResult(null);
 
     try {
+      const fingerprint = await getFingerprint();
       const { data, error: fnError } = await supabase.functions.invoke("preview-bullet", {
-        body: { bullet: bullet.trim(), targetRole: targetRole.trim() || undefined },
+        body: {
+          bullet: bullet.trim(),
+          targetRole: targetRole.trim() || undefined,
+          fingerprint,
+        },
       });
 
       if (fnError) throw new Error(fnError.message || "Preview failed");
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) {
+        if (data.code === "fingerprint_exhausted" || data.code === "ip_rate_limited") {
+          setServerLocked(true);
+          markTrialUsed();
+          setUsedCount(FREE_LIMIT);
+        }
+        throw new Error(data.error);
+      }
 
       setResult(data as PreviewResult);
       const next = usedCount + 1;
       setUsedCount(next);
       localStorage.setItem(STORAGE_KEY, String(next));
+      if (next >= FREE_LIMIT) markTrialUsed();
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.");
     } finally {
@@ -118,14 +139,16 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
             {limitReached && (
               <div className="rounded-lg border border-secondary/40 bg-secondary/10 p-3 text-center space-y-2">
                 <p className="text-sm font-body text-primary-foreground">
-                  You've used all <strong className="text-secondary">3 free alignments</strong>. Sign up to align your full resume.
+                  {serverLocked
+                    ? "This device has reached its free alignment limit. Upgrade to the Bypass Pack to continue."
+                    : <>You've used all <strong className="text-secondary">3 free alignments</strong>. Sign up to align your full resume.</>}
                 </p>
                 <Button
                   onClick={onWantMore}
                   size="sm"
                   className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl"
                 >
-                  Sign Up & Align Full Resume
+                  {serverLocked ? "Get the Bypass Pack" : "Sign Up & Align Full Resume"}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>

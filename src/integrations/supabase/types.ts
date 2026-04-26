@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      abuse_signals: {
+        Row: {
+          created_at: string
+          email_domain: string | null
+          fingerprint: string | null
+          id: string
+          ip_address: string | null
+          signal_type: string
+        }
+        Insert: {
+          created_at?: string
+          email_domain?: string | null
+          fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          signal_type: string
+        }
+        Update: {
+          created_at?: string
+          email_domain?: string | null
+          fingerprint?: string | null
+          id?: string
+          ip_address?: string | null
+          signal_type?: string
+        }
+        Relationships: []
+      }
       contact_submissions: {
         Row: {
           created_at: string
@@ -332,6 +359,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_free_trial_abuse: {
+        Args: { p_fingerprint: string; p_ip: string }
+        Returns: string
+      }
       consume_export: { Args: { p_user_id: string }; Returns: number }
       deduct_credit: { Args: { p_user_id: string }; Returns: number }
       delete_email: {

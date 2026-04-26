@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,13 +18,21 @@ Also produce "tunedBullet" — the rewritten version of the bullet using the tar
 
 IMPORTANT: You MUST respond by calling the provided function tool. Do NOT return plain text.`;
 
+function getClientIp(req: Request): string | null {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0]?.trim() || null;
+  }
+  return req.headers.get("cf-connecting-ip") || req.headers.get("x-real-ip") || null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { bullet, targetRole } = await req.json();
+    const { bullet, targetRole, fingerprint } = await req.json();
 
     if (!bullet || typeof bullet !== "string" || bullet.trim().length < 10) {
       return new Response(
@@ -36,6 +45,41 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Bullet point too long. Keep it under 500 characters." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    const ip = getClientIp(req);
+    const fp = typeof fingerprint === "string" && fingerprint.length > 0 ? fingerprint : null;
+
+    // Server-side abuse check
+    const { data: abuseResult, error: abuseErr } = await supabase.rpc("check_free_trial_abuse", {
+      p_fingerprint: fp,
+      p_ip: ip,
+    });
+
+    if (abuseErr) {
+      console.error("abuse check failed:", abuseErr);
+    } else if (abuseResult === "fingerprint_exhausted") {
+      return new Response(
+        JSON.stringify({
+          error:
+            "This device has reached its free alignment limit. Please upgrade to the Bypass Pack to continue.",
+          code: "fingerprint_exhausted",
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } else if (abuseResult === "ip_rate_limited") {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Free alignment limit reached for your network today. Try again tomorrow or upgrade to the Bypass Pack.",
+          code: "ip_rate_limited",
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -125,6 +169,17 @@ serve(async (req) => {
     }
 
     const result = JSON.parse(toolCall.function.arguments);
+
+    // Record successful free preview (best-effort, non-blocking semantics)
+    try {
+      await supabase.from("abuse_signals").insert({
+        fingerprint: fp,
+        ip_address: ip,
+        signal_type: "free_preview",
+      });
+    } catch (logErr) {
+      console.error("abuse_signals insert failed:", logErr);
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

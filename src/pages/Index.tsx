@@ -26,7 +26,7 @@ import BulletPreview from "@/components/BulletPreview";
 import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
-import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, deductCredit, type CreditStatus } from "@/lib/credits";
+import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, deductCredit, consumeExport, type CreditStatus } from "@/lib/credits";
 import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
 import { saveToHistory } from "@/lib/resumeHistory";
 import { redeemReferralCode } from "@/lib/referrals";
@@ -35,6 +35,9 @@ const EMPTY_CREDIT_STATUS: CreditStatus = {
   hasUsedFreeCredit: false,
   balance: 0,
   isAuthenticated: false,
+  passExpiresAt: null,
+  exportsRemaining: 0,
+  hasActivePass: false,
 };
 
 const Index = () => {

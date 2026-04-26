@@ -2,6 +2,22 @@ import FingerprintJS from "@fingerprintjs/fingerprintjs";
 
 const TRIAL_USED_KEY = "rr_trial_used";
 const TRIAL_COUNT_KEY = "rr_preview_count";
+
+/**
+ * Allowlisted email addresses bypass all anti-abuse checks
+ * (fingerprint, IP rate limit, disposable email block, persistent trial flag).
+ * Used for owner/test accounts.
+ */
+export const ABUSE_ALLOWLIST = new Set<string>([
+  "djcoolmike@gmail.com",
+]);
+
+export function isAllowlistedEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return ABUSE_ALLOWLIST.has(email.trim().toLowerCase());
+}
+
+const TRIAL_COUNT_KEY = "rr_preview_count";
 const FINGERPRINT_KEY = "rr_fp";
 const COOKIE_NAME = "rr_trial";
 

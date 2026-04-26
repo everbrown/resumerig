@@ -21,17 +21,24 @@ interface BulletPreviewProps {
   onWantMore: () => void;
 }
 
+const FREE_LIMIT = 3;
+const STORAGE_KEY = "rr_preview_count";
+
 const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
   const [bullet, setBullet] = useState("");
   const [targetRole, setTargetRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [error, setError] = useState("");
-  const [hasUsedPreview, setHasUsedPreview] = useState(
-    () => sessionStorage.getItem("rr_preview_used") === "true"
-  );
+  const [usedCount, setUsedCount] = useState(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const n = raw ? parseInt(raw, 10) : 0;
+    return Number.isFinite(n) ? n : 0;
+  });
 
-  const canSubmit = bullet.trim().length >= 10 && !loading && !hasUsedPreview;
+  const remaining = Math.max(0, FREE_LIMIT - usedCount);
+  const limitReached = remaining <= 0;
+  const canSubmit = bullet.trim().length >= 10 && !loading && !limitReached;
 
   const handlePreview = async () => {
     if (!canSubmit) return;
@@ -49,13 +56,20 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
       if (data?.error) throw new Error(data.error);
 
       setResult(data as PreviewResult);
-      setHasUsedPreview(true);
-      sessionStorage.setItem("rr_preview_used", "true");
+      const next = usedCount + 1;
+      setUsedCount(next);
+      localStorage.setItem(STORAGE_KEY, String(next));
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTryAnother = () => {
+    setResult(null);
+    setBullet("");
+    setError("");
   };
 
   return (
@@ -66,11 +80,16 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
       className="mx-auto mt-10 max-w-2xl"
     >
       <div className="rounded-2xl border border-secondary/30 bg-background/10 backdrop-blur-sm p-6 shadow-[var(--shadow-elevated)]">
-        <div className="flex items-center gap-2 mb-3">
-          <Zap className="h-4 w-4 text-secondary" />
-          <p className="font-display text-sm font-semibold text-primary-foreground tracking-wide uppercase">
-            Instant Preview — No Account Needed
-          </p>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center gap-2">
+            <Zap className="h-4 w-4 text-secondary" />
+            <p className="font-display text-sm font-semibold text-primary-foreground tracking-wide uppercase">
+              Try 3 Free Alignments — No Account Needed
+            </p>
+          </div>
+          <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5">
+            {remaining}/{FREE_LIMIT} left
+          </span>
         </div>
         <p className="font-body text-base text-primary-foreground/80 mb-4 leading-relaxed">
           Paste your toughest bullet point below. See it <strong className="text-secondary">hard-coded</strong> for your target domain instantly.
@@ -82,7 +101,7 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
               placeholder="e.g. Led a platoon of 40 soldiers through complex field operations across 3 deployment cycles..."
               value={bullet}
               onChange={(e) => setBullet(e.target.value.slice(0, 500))}
-              disabled={loading || hasUsedPreview}
+              disabled={loading || limitReached}
               className="min-h-[80px] bg-background/80 border-border/50 text-foreground placeholder:text-muted-foreground/60 font-body text-sm resize-none"
               rows={3}
             />
@@ -90,16 +109,26 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
               placeholder="Target role (optional) — e.g. Senior Project Manager"
               value={targetRole}
               onChange={(e) => setTargetRole(e.target.value.slice(0, 100))}
-              disabled={loading || hasUsedPreview}
+              disabled={loading || limitReached}
               className="bg-background/80 border-border/50 text-foreground placeholder:text-muted-foreground/60 font-body text-sm"
             />
             {error && (
               <p className="text-xs text-destructive font-body">{error}</p>
             )}
-            {hasUsedPreview && !result && (
-              <p className="text-xs text-muted-foreground font-body">
-                You've already used your free preview. Sign up to align your full resume!
-              </p>
+            {limitReached && (
+              <div className="rounded-lg border border-secondary/40 bg-secondary/10 p-3 text-center space-y-2">
+                <p className="text-sm font-body text-primary-foreground">
+                  You've used all <strong className="text-secondary">3 free alignments</strong>. Sign up to align your full resume.
+                </p>
+                <Button
+                  onClick={onWantMore}
+                  size="sm"
+                  className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl"
+                >
+                  Sign Up & Align Full Resume
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
             )}
             <Button
               onClick={handlePreview}
@@ -114,7 +143,7 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  Translate This Bullet — Free
+                  Translate This Bullet — Free ({remaining} left)
                 </>
               )}
             </Button>
@@ -161,18 +190,46 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
                 </div>
               </div>
 
-              {/* CTA to full alignment */}
+              {/* CTA: try another or go full */}
               <div className="rounded-xl border border-secondary/40 bg-secondary/10 p-4 text-center space-y-3">
-                <p className="font-body text-sm text-primary-foreground/80">
-                  That was <strong className="text-secondary">one bullet</strong>. Imagine your entire resume hard-coded like this — with a full match score, cover letter, and outreach messages.
-                </p>
-                <Button
-                  onClick={onWantMore}
-                  className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl shadow-lg shadow-secondary/30 animate-pulse hover:animate-none"
-                >
-                  Hard-Code My Full Resume — Free First Try
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
+                {remaining > 0 ? (
+                  <>
+                    <p className="font-body text-sm text-primary-foreground/80">
+                      Nice. You have <strong className="text-secondary">{remaining} free alignment{remaining !== 1 ? "s" : ""}</strong> left, or jump straight to your full resume.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button
+                        onClick={handleTryAnother}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 font-body font-semibold rounded-xl border-secondary/40 text-primary-foreground bg-background/40 hover:bg-background/60"
+                      >
+                        Try Another Bullet
+                      </Button>
+                      <Button
+                        onClick={onWantMore}
+                        size="sm"
+                        className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl shadow-lg shadow-secondary/30"
+                      >
+                        Align My Full Resume
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-body text-sm text-primary-foreground/80">
+                      That was your <strong className="text-secondary">3rd free alignment</strong>. Sign up to align your full resume — first one's free.
+                    </p>
+                    <Button
+                      onClick={onWantMore}
+                      className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl shadow-lg shadow-secondary/30 animate-pulse hover:animate-none"
+                    >
+                      Sign Up & Align My Full Resume
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>

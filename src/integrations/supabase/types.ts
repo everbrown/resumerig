@@ -77,24 +77,30 @@ export type Database = {
         Row: {
           balance: number
           created_at: string
+          exports_remaining: number
           has_used_free_credit: boolean
           id: string
+          pass_expires_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           balance?: number
           created_at?: string
+          exports_remaining?: number
           has_used_free_credit?: boolean
           id?: string
+          pass_expires_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           balance?: number
           created_at?: string
+          exports_remaining?: number
           has_used_free_credit?: boolean
           id?: string
+          pass_expires_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -326,6 +332,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_export: { Args: { p_user_id: string }; Returns: number }
       deduct_credit: { Args: { p_user_id: string }; Returns: number }
       delete_email: {
         Args: { message_id: number; queue_name: string }

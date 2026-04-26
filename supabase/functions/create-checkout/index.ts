@@ -8,9 +8,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const PRICE_MAP: Record<string, { priceId: string; credits: number }> = {
-  starter: { priceId: "price_1TFz72IB5E7QnCF8tGrazKQw", credits: 3 },
-  power: { priceId: "price_1TFz7nIB5E7QnCF8AaqeTgJR", credits: 12 },
+// 24h Bypass Fee: $1.99 — unlimited alignments for 24h + 1 export
+const PRICE_MAP: Record<string, { priceId: string; passHours: number; exports: number }> = {
+  bypass: { priceId: "price_1TQaSoIB5E7QnCF8hvAFIdLx", passHours: 24, exports: 1 },
 };
 
 serve(async (req) => {
@@ -31,8 +31,7 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated");
 
     const { pack } = await req.json();
-    const packInfo = PRICE_MAP[pack];
-    if (!packInfo) throw new Error("Invalid pack selected");
+    const packInfo = PRICE_MAP[pack] ?? PRICE_MAP.bypass;
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
@@ -51,8 +50,9 @@ serve(async (req) => {
       mode: "payment",
       metadata: {
         user_id: user.id,
-        credits: String(packInfo.credits),
-        pack_name: pack,
+        pack_name: pack ?? "bypass",
+        pass_hours: String(packInfo.passHours),
+        exports: String(packInfo.exports),
         fulfilled: "false",
       },
       success_url: `${req.headers.get("origin")}/?payment=success&session_id={CHECKOUT_SESSION_ID}`,

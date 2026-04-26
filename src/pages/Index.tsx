@@ -26,7 +26,7 @@ import BulletPreview from "@/components/BulletPreview";
 import OnePageResume from "@/components/OnePageResume";
 import { analyzeCareerPivot, type AnalysisResult } from "@/lib/analyzeCareerPivot";
 import { generateOutreach, type OutreachResult } from "@/lib/linkedinOutreach";
-import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, deductCredit, type CreditStatus } from "@/lib/credits";
+import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, deductCredit, consumeExport, type CreditStatus } from "@/lib/credits";
 import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
 import { saveToHistory } from "@/lib/resumeHistory";
 import { redeemReferralCode } from "@/lib/referrals";
@@ -35,6 +35,9 @@ const EMPTY_CREDIT_STATUS: CreditStatus = {
   hasUsedFreeCredit: false,
   balance: 0,
   isAuthenticated: false,
+  passExpiresAt: null,
+  exportsRemaining: 0,
+  hasActivePass: false,
 };
 
 const Index = () => {
@@ -51,6 +54,7 @@ const Index = () => {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<"alignments" | "export">("alignments");
   const [needsReview, setNeedsReview] = useState(false);
   const [creditStatus, setCreditStatus] = useState<CreditStatus>(EMPTY_CREDIT_STATUS);
   const [creditLoading, setCreditLoading] = useState(true);
@@ -80,11 +84,17 @@ const Index = () => {
     sessionStorage.removeItem(pendingActionKey);
   };
 
-  const openPaywall = (action?: "analyze" | "outreach") => {
-    if (action) {
-      sessionStorage.setItem(pendingActionKey, action);
-    } else {
+  const openPaywall = (action?: "analyze" | "outreach" | "export") => {
+    if (action === "export") {
+      setPaywallReason("export");
       clearPendingPaidAction();
+    } else {
+      setPaywallReason("alignments");
+      if (action) {
+        sessionStorage.setItem(pendingActionKey, action);
+      } else {
+        clearPendingPaidAction();
+      }
     }
     setShowPaywall(true);
   };
@@ -162,12 +172,15 @@ const Index = () => {
         }
       }
 
-      if (!latestStatus || latestStatus.balance <= 0) {
+      const hasAccessNow = (s: CreditStatus | null) =>
+        !!s && (s.hasActivePass || s.balance > 0);
+
+      if (!hasAccessNow(latestStatus)) {
         for (let attempt = 0; attempt < 10; attempt += 1) {
           latestStatus = await refreshCredits();
           if (cancelled) return;
 
-          if (latestStatus.balance > 0) break;
+          if (hasAccessNow(latestStatus)) break;
 
           await new Promise((resolve) => setTimeout(resolve, 1500));
         }
@@ -175,19 +188,19 @@ const Index = () => {
 
       window.history.replaceState({}, "", "/");
 
-      if (!latestStatus || latestStatus.balance <= 0) {
-        toast.error("Your payment went through, but credits are still syncing. Please refresh in a moment.");
+      if (!hasAccessNow(latestStatus)) {
+        toast.error("Your payment went through, but access is still syncing. Please refresh in a moment.");
         return;
       }
 
       const pendingAction = getPendingPaidAction();
       clearPendingPaidAction();
-      toast.success(`Payment successful! ${latestStatus.balance} credits ready.`);
+      toast.success(`Payment successful! 24h Bypass active.`);
 
       if (pendingAction === "analyze") {
-        await handleAnalyze(latestStatus);
+        await handleAnalyze(latestStatus!);
       } else if (pendingAction === "outreach") {
-        await handleOutreach(latestStatus);
+        await handleOutreach(latestStatus!);
       }
     };
 
@@ -216,7 +229,10 @@ const Index = () => {
     }
 
     const activeCreditStatus = statusOverride ?? await refreshCredits();
-    if (activeCreditStatus.hasUsedFreeCredit && activeCreditStatus.balance <= 0) {
+    const hasFirstFree = !activeCreditStatus.hasUsedFreeCredit;
+    const hasAccess = activeCreditStatus.hasActivePass || activeCreditStatus.balance > 0 || hasFirstFree;
+
+    if (!hasAccess) {
       openPaywall("analyze");
       return;
     }
@@ -233,11 +249,16 @@ const Index = () => {
       const targetRole = jobDescription.match(/(?:title|role|position)[:\s]+([^\n,]+)/i)?.[1]?.trim();
       saveToHistory(resume, jobDescription, data, targetRole).catch(console.error);
 
-      if (!activeCreditStatus.hasUsedFreeCredit) {
+      // Pass active = unlimited, no consumption
+      if (activeCreditStatus.hasActivePass) {
+        // no-op
+      } else if (hasFirstFree) {
         await markFreeCreditUsed();
       } else {
         await deductCredit();
       }
+      // Refresh status to reflect any change
+      void refreshCredits();
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
       setError(msg);
@@ -251,8 +272,9 @@ const Index = () => {
     if (!result) return;
 
     const activeCreditStatus = statusOverride ?? await refreshCredits();
+    const hasAccess = activeCreditStatus.hasActivePass || activeCreditStatus.balance > 0;
 
-    if (activeCreditStatus.balance <= 0) {
+    if (!hasAccess) {
       openPaywall("outreach");
       return;
     }
@@ -271,8 +293,8 @@ const Index = () => {
       toast.success("Outreach messages generated!");
     } catch (err: any) {
       const msg = err?.message || "Outreach generation failed.";
-      if (msg.includes("No credits")) {
-        setShowPaywall(true);
+      if (msg.includes("No credits") || msg.includes("No access")) {
+        openPaywall("outreach");
       } else {
         toast.error(msg);
       }
@@ -292,8 +314,12 @@ const Index = () => {
           ) : user ? (
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-primary-foreground/60">{user.email}</span>
-              <span className="font-mono text-xs text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5">
-                {creditLoading ? "Syncing credits..." : `${creditStatus.balance} credit${creditStatus.balance !== 1 ? "s" : ""}`}
+              <span className={`font-mono text-xs ${creditStatus.hasActivePass ? 'text-secondary' : 'text-primary-foreground/60'} bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5`}>
+                {creditLoading
+                  ? "Syncing..."
+                  : creditStatus.hasActivePass
+                    ? `24h Pass · ${creditStatus.exportsRemaining} export${creditStatus.exportsRemaining !== 1 ? "s" : ""}`
+                    : creditStatus.hasUsedFreeCredit ? "No active pass" : "1 free alignment"}
               </span>
               <button
                 onClick={() => navigate("/dashboard")}
@@ -353,45 +379,58 @@ const Index = () => {
               Resume<span className="text-secondary">Rig</span>
             </h1>
             <h2 className="mt-4 font-display text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-primary-foreground leading-tight max-w-3xl mx-auto">
-              The Hardest Part of a Career Pivot Isn't the Work—It's the Translation.
+              Hard-Code Your Career Pivot for the Price of a Coffee.
             </h2>
+            <p className="mt-3 font-body text-base sm:text-lg text-secondary font-semibold">
+              Try 3 alignments for free.
+            </p>
             <p className="mt-4 font-body text-base sm:text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
-               Your experience is elite, but <strong className="text-primary-foreground font-semibold">recruiters won't connect the dots for you.</strong> Stop letting ATS (Application Tracking System) filters ignore your potential. Resume Rig identifies your target domain and <strong className="text-primary-foreground font-semibold">hard-codes your professional data</strong> to speak its language.
+               Your experience is elite, but <strong className="text-primary-foreground font-semibold">recruiters won't connect the dots for you.</strong> Resume Rig identifies your target domain and <strong className="text-primary-foreground font-semibold">hard-codes your professional data</strong> to speak its language.
             </p>
              {user && (
                <div className="mx-auto mt-6 max-w-xl rounded-2xl border border-secondary/30 bg-background/10 p-5 text-left shadow-[var(--shadow-elevated)] backdrop-blur-sm">
                  <div className="flex items-start justify-between gap-4">
                    <div>
                      <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary-foreground/60">
-                       Available Career Credits
+                       Your Access
                      </p>
-                     <p className="mt-2 font-display text-4xl font-bold text-primary-foreground">
-                       {creditLoading ? "..." : creditStatus.balance}
+                     <p className="mt-2 font-display text-3xl font-bold text-primary-foreground">
+                       {creditLoading
+                         ? "..."
+                         : creditStatus.hasActivePass
+                           ? "24h Pass · Unlimited"
+                           : creditStatus.hasUsedFreeCredit
+                             ? "No active pass"
+                             : "1 free alignment"}
                      </p>
                    </div>
                    <div className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-mono text-secondary">
-                     {creditLoading ? "Checking balance" : `${creditStatus.balance} ready`}
+                     {creditStatus.exportsRemaining > 0
+                       ? `${creditStatus.exportsRemaining} export${creditStatus.exportsRemaining !== 1 ? "s" : ""}`
+                       : "0 exports"}
                    </div>
                  </div>
                  <p className="mt-3 font-body text-sm text-primary-foreground/70">
                    {creditLoading
-                     ? "Checking your latest balance now."
-                     : creditStatus.balance > 0
-                       ? "You have credits available, so you should go straight into the operation without seeing the paywall."
+                     ? "Checking your latest access now."
+                     : creditStatus.hasActivePass && creditStatus.passExpiresAt
+                       ? `Unlimited alignments until ${new Date(creditStatus.passExpiresAt).toLocaleString()}.`
                        : creditStatus.hasUsedFreeCredit
-                         ? "You’re out of credits right now, so the paywall will only appear when you try to run another operation."
+                         ? "Get the $1.99 Bypass for unlimited alignments + 1 export."
                          : "Your first alignment is still available for free."}
                  </p>
                </div>
              )}
-            <Button
-              onClick={() => document.getElementById('resume-input-section')?.scrollIntoView({ behavior: 'smooth' })}
-              size="lg"
-              className="mt-6 gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg"
-            >
-              HARD-CODE MY FIRST RESUME — FREE
-              <ArrowRight className="h-5 w-5" />
-            </Button>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <Button
+                onClick={() => document.getElementById('resume-input-section')?.scrollIntoView({ behavior: 'smooth' })}
+                size="lg"
+                className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg"
+              >
+                GET STARTED FOR FREE
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </div>
             {/* Anonymous bullet preview */}
             {!user && (
               <BulletPreview
@@ -482,7 +521,7 @@ const Index = () => {
             size="lg"
             className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg disabled:opacity-50"
           >
-            HARD-CODE MY FIRST RESUME — FREE
+            {creditStatus.hasActivePass ? "ALIGN MY RESUME" : creditStatus.hasUsedFreeCredit ? "ALIGN — UNLOCK FOR $1.99" : "HARD-CODE MY RESUME — FREE"}
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>
@@ -547,32 +586,52 @@ const Index = () => {
                   variant="outline"
                   className="gap-2 font-body"
                   onClick={async () => {
+                    if (creditStatus.exportsRemaining <= 0) {
+                      openPaywall("export");
+                      return;
+                    }
                     try {
+                      const remaining = await consumeExport();
+                      if (remaining < 0) {
+                        openPaywall("export");
+                        return;
+                      }
                       await downloadAsDocx(result.tunedResume);
                       toast.success("DOCX downloaded!");
+                      void refreshCredits();
                     } catch {
                       toast.error("Failed to generate DOCX");
                     }
                   }}
                 >
                   <FileDown className="h-4 w-4" />
-                  Download .docx
+                  Download .docx{creditStatus.exportsRemaining > 0 ? ` (${creditStatus.exportsRemaining} left)` : ""}
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="gap-2 font-body"
-                  onClick={() => {
+                  onClick={async () => {
+                    if (creditStatus.exportsRemaining <= 0) {
+                      openPaywall("export");
+                      return;
+                    }
                     try {
+                      const remaining = await consumeExport();
+                      if (remaining < 0) {
+                        openPaywall("export");
+                        return;
+                      }
                       downloadAsPdf(result.tunedResume);
                       toast.success("PDF downloaded!");
+                      void refreshCredits();
                     } catch {
                       toast.error("Failed to generate PDF");
                     }
                   }}
                 >
                   <Download className="h-4 w-4" />
-                  Download .pdf
+                  Download .pdf{creditStatus.exportsRemaining > 0 ? ` (${creditStatus.exportsRemaining} left)` : ""}
                 </Button>
               </div>
             </ResultSection>
@@ -582,7 +641,7 @@ const Index = () => {
               <OnePageResume
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
-                hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                hasCredits={creditStatus.hasActivePass || creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
                  onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />
@@ -598,7 +657,7 @@ const Index = () => {
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
                 pivotPitch={result.pivotPitch}
-                hasCredits={creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                hasCredits={creditStatus.hasActivePass || creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
                  onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />
@@ -643,10 +702,14 @@ const Index = () => {
       </main>
 
       <Footer />
-      <PaywallModal open={showPaywall} onClose={() => {
-        clearPendingPaidAction();
-        setShowPaywall(false);
-      }} />
+      <PaywallModal
+        open={showPaywall}
+        reason={paywallReason}
+        onClose={() => {
+          clearPendingPaidAction();
+          setShowPaywall(false);
+        }}
+      />
     </div>
   );
 };

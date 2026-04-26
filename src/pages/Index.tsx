@@ -379,45 +379,58 @@ const Index = () => {
               Resume<span className="text-secondary">Rig</span>
             </h1>
             <h2 className="mt-4 font-display text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-primary-foreground leading-tight max-w-3xl mx-auto">
-              The Hardest Part of a Career Pivot Isn't the Work—It's the Translation.
+              Hard-Code Your Career Pivot for the Price of a Coffee.
             </h2>
+            <p className="mt-3 font-body text-base sm:text-lg text-secondary font-semibold">
+              Try 3 alignments for free.
+            </p>
             <p className="mt-4 font-body text-base sm:text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
-               Your experience is elite, but <strong className="text-primary-foreground font-semibold">recruiters won't connect the dots for you.</strong> Stop letting ATS (Application Tracking System) filters ignore your potential. Resume Rig identifies your target domain and <strong className="text-primary-foreground font-semibold">hard-codes your professional data</strong> to speak its language.
+               Your experience is elite, but <strong className="text-primary-foreground font-semibold">recruiters won't connect the dots for you.</strong> Resume Rig identifies your target domain and <strong className="text-primary-foreground font-semibold">hard-codes your professional data</strong> to speak its language.
             </p>
              {user && (
                <div className="mx-auto mt-6 max-w-xl rounded-2xl border border-secondary/30 bg-background/10 p-5 text-left shadow-[var(--shadow-elevated)] backdrop-blur-sm">
                  <div className="flex items-start justify-between gap-4">
                    <div>
                      <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary-foreground/60">
-                       Available Career Credits
+                       Your Access
                      </p>
-                     <p className="mt-2 font-display text-4xl font-bold text-primary-foreground">
-                       {creditLoading ? "..." : creditStatus.balance}
+                     <p className="mt-2 font-display text-3xl font-bold text-primary-foreground">
+                       {creditLoading
+                         ? "..."
+                         : creditStatus.hasActivePass
+                           ? "24h Pass · Unlimited"
+                           : creditStatus.hasUsedFreeCredit
+                             ? "No active pass"
+                             : "1 free alignment"}
                      </p>
                    </div>
                    <div className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-mono text-secondary">
-                     {creditLoading ? "Checking balance" : `${creditStatus.balance} ready`}
+                     {creditStatus.exportsRemaining > 0
+                       ? `${creditStatus.exportsRemaining} export${creditStatus.exportsRemaining !== 1 ? "s" : ""}`
+                       : "0 exports"}
                    </div>
                  </div>
                  <p className="mt-3 font-body text-sm text-primary-foreground/70">
                    {creditLoading
-                     ? "Checking your latest balance now."
-                     : creditStatus.balance > 0
-                       ? "You have credits available, so you should go straight into the operation without seeing the paywall."
+                     ? "Checking your latest access now."
+                     : creditStatus.hasActivePass && creditStatus.passExpiresAt
+                       ? `Unlimited alignments until ${new Date(creditStatus.passExpiresAt).toLocaleString()}.`
                        : creditStatus.hasUsedFreeCredit
-                         ? "You’re out of credits right now, so the paywall will only appear when you try to run another operation."
+                         ? "Get the $1.99 Bypass for unlimited alignments + 1 export."
                          : "Your first alignment is still available for free."}
                  </p>
                </div>
              )}
-            <Button
-              onClick={() => document.getElementById('resume-input-section')?.scrollIntoView({ behavior: 'smooth' })}
-              size="lg"
-              className="mt-6 gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg"
-            >
-              HARD-CODE MY FIRST RESUME — FREE
-              <ArrowRight className="h-5 w-5" />
-            </Button>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <Button
+                onClick={() => document.getElementById('resume-input-section')?.scrollIntoView({ behavior: 'smooth' })}
+                size="lg"
+                className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg"
+              >
+                GET STARTED FOR FREE
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </div>
             {/* Anonymous bullet preview */}
             {!user && (
               <BulletPreview

@@ -56,17 +56,30 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
     setResult(null);
 
     try {
+      const fingerprint = await getFingerprint();
       const { data, error: fnError } = await supabase.functions.invoke("preview-bullet", {
-        body: { bullet: bullet.trim(), targetRole: targetRole.trim() || undefined },
+        body: {
+          bullet: bullet.trim(),
+          targetRole: targetRole.trim() || undefined,
+          fingerprint,
+        },
       });
 
       if (fnError) throw new Error(fnError.message || "Preview failed");
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) {
+        if (data.code === "fingerprint_exhausted" || data.code === "ip_rate_limited") {
+          setServerLocked(true);
+          markTrialUsed();
+          setUsedCount(FREE_LIMIT);
+        }
+        throw new Error(data.error);
+      }
 
       setResult(data as PreviewResult);
       const next = usedCount + 1;
       setUsedCount(next);
       localStorage.setItem(STORAGE_KEY, String(next));
+      if (next >= FREE_LIMIT) markTrialUsed();
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.");
     } finally {

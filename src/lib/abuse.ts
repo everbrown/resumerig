@@ -17,7 +17,6 @@ export function isAllowlistedEmail(email: string | null | undefined): boolean {
   return ABUSE_ALLOWLIST.has(email.trim().toLowerCase());
 }
 
-const TRIAL_COUNT_KEY = "rr_preview_count";
 const FINGERPRINT_KEY = "rr_fp";
 const COOKIE_NAME = "rr_trial";
 

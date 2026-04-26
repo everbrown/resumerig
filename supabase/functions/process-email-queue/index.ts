@@ -52,11 +52,20 @@ function parseJwtClaims(token: string): Record<string, unknown> | null {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseLike = any
+
+interface QueueMessage {
+  msg_id: number
+  read_ct: number
+  message: Record<string, any>
+}
+
 // Move a message to the dead letter queue and log the reason.
 async function moveToDlq(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseLike,
   queue: string,
-  msg: { msg_id: number; message: Record<string, unknown> },
+  msg: QueueMessage,
   reason: string
 ): Promise<void> {
   const payload = msg.message

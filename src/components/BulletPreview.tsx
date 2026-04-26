@@ -122,7 +122,7 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
             </p>
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5">
-            {remaining}/{FREE_LIMIT} left
+            {allowlisted ? "Unlimited" : `${remaining}/${FREE_LIMIT} left`}
           </span>
         </div>
         <p className="font-body text-base text-primary-foreground/80 mb-4 leading-relaxed">

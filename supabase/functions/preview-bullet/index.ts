@@ -192,15 +192,17 @@ serve(async (req) => {
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    // Record successful free preview (best-effort, non-blocking semantics)
-    try {
-      await supabase.from("abuse_signals").insert({
-        fingerprint: fp,
-        ip_address: ip,
-        signal_type: "free_preview",
-      });
-    } catch (logErr) {
-      console.error("abuse_signals insert failed:", logErr);
+    // Record successful free preview (best-effort). Skip for allowlisted accounts.
+    if (!allowlisted) {
+      try {
+        await supabase.from("abuse_signals").insert({
+          fingerprint: fp,
+          ip_address: ip,
+          signal_type: "free_preview",
+        });
+      } catch (logErr) {
+        console.error("abuse_signals insert failed:", logErr);
+      }
     }
 
     return new Response(JSON.stringify(result), {

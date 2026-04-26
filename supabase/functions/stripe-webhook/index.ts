@@ -27,31 +27,48 @@ serve(async (req) => {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
-    const credits = parseInt(session.metadata?.credits || "0", 10);
+    const passHours = parseInt(session.metadata?.pass_hours || "24", 10);
+    const exportsGranted = parseInt(session.metadata?.exports || "1", 10);
     const alreadyFulfilled = session.metadata?.fulfilled === "true";
 
-    if (userId && credits > 0 && !alreadyFulfilled) {
+    if (userId && !alreadyFulfilled) {
       const supabaseAdmin = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
       );
 
-      // Upsert credit balance
       const { data: existing } = await supabaseAdmin
         .from("credit_balances")
-        .select("balance")
+        .select("exports_remaining, pass_expires_at")
         .eq("user_id", userId)
         .maybeSingle();
+
+      const now = Date.now();
+      const currentExpiry = existing?.pass_expires_at ? new Date(existing.pass_expires_at as string).getTime() : 0;
+      const baseTime = currentExpiry > now ? currentExpiry : now;
+      const newExpiry = new Date(baseTime + passHours * 60 * 60 * 1000).toISOString();
+      const newExports = (existing?.exports_remaining ?? 0) + exportsGranted;
 
       if (existing) {
         await supabaseAdmin
           .from("credit_balances")
-          .update({ balance: existing.balance + credits, updated_at: new Date().toISOString() })
+          .update({
+            pass_expires_at: newExpiry,
+            exports_remaining: newExports,
+            has_used_free_credit: true,
+            updated_at: new Date().toISOString(),
+          } as any)
           .eq("user_id", userId);
       } else {
         await supabaseAdmin
           .from("credit_balances")
-          .insert({ user_id: userId, balance: credits, has_used_free_credit: true });
+          .insert({
+            user_id: userId,
+            balance: 0,
+            pass_expires_at: newExpiry,
+            exports_remaining: newExports,
+            has_used_free_credit: true,
+          } as any);
       }
 
       await stripe.checkout.sessions.update(session.id, {
@@ -62,10 +79,7 @@ serve(async (req) => {
         },
       });
 
-      // Fulfill referral bonus if applicable
-      await supabaseAdmin.rpc("fulfill_referral_bonus", { p_user_id: userId });
-
-      console.log(`Added ${credits} credits for user ${userId}`);
+      console.log(`Granted ${passHours}h pass + ${exportsGranted} export(s) to user ${userId}`);
     }
   }
 

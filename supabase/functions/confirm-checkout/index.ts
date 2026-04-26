@@ -64,7 +64,8 @@ serve(async (req) => {
       });
     }
 
-    const credits = parseInt(session.metadata?.credits || "0", 10);
+    const passHours = parseInt(session.metadata?.pass_hours || "24", 10);
+    const exportsGranted = parseInt(session.metadata?.exports || "1", 10);
     const alreadyFulfilled = session.metadata?.fulfilled === "true";
 
     const supabaseAdmin = createClient(
@@ -72,22 +73,40 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    if (credits > 0 && !alreadyFulfilled) {
+    if (!alreadyFulfilled) {
       const { data: existing } = await supabaseAdmin
         .from("credit_balances")
-        .select("balance")
+        .select("exports_remaining, pass_expires_at")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      // Extend pass from now (or from current expiry if still active) by passHours
+      const now = Date.now();
+      const currentExpiry = existing?.pass_expires_at ? new Date(existing.pass_expires_at as string).getTime() : 0;
+      const baseTime = currentExpiry > now ? currentExpiry : now;
+      const newExpiry = new Date(baseTime + passHours * 60 * 60 * 1000).toISOString();
+      const newExports = (existing?.exports_remaining ?? 0) + exportsGranted;
 
       if (existing) {
         await supabaseAdmin
           .from("credit_balances")
-          .update({ balance: existing.balance + credits, updated_at: new Date().toISOString(), has_used_free_credit: true })
+          .update({
+            pass_expires_at: newExpiry,
+            exports_remaining: newExports,
+            has_used_free_credit: true,
+            updated_at: new Date().toISOString(),
+          } as any)
           .eq("user_id", user.id);
       } else {
         await supabaseAdmin
           .from("credit_balances")
-          .insert({ user_id: user.id, balance: credits, has_used_free_credit: true });
+          .insert({
+            user_id: user.id,
+            balance: 0,
+            pass_expires_at: newExpiry,
+            exports_remaining: newExports,
+            has_used_free_credit: true,
+          } as any);
       }
 
       await stripe.checkout.sessions.update(session.id, {
@@ -99,18 +118,17 @@ serve(async (req) => {
       });
     }
 
-    // Fulfill referral bonus if applicable
-    await supabaseAdmin.rpc("fulfill_referral_bonus", { p_user_id: user.id });
-
     const { data: balanceRow } = await supabaseAdmin
       .from("credit_balances")
-      .select("balance, has_used_free_credit")
+      .select("balance, has_used_free_credit, pass_expires_at, exports_remaining")
       .eq("user_id", user.id)
       .maybeSingle();
 
     return new Response(JSON.stringify({
       balance: balanceRow?.balance ?? 0,
       hasUsedFreeCredit: balanceRow?.has_used_free_credit ?? false,
+      passExpiresAt: balanceRow?.pass_expires_at ?? null,
+      exportsRemaining: balanceRow?.exports_remaining ?? 0,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

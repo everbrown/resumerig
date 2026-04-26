@@ -4,25 +4,44 @@ export interface CreditStatus {
   hasUsedFreeCredit: boolean;
   balance: number;
   isAuthenticated: boolean;
+  passExpiresAt: string | null;
+  exportsRemaining: number;
+  hasActivePass: boolean;
+}
+
+const EMPTY: CreditStatus = {
+  hasUsedFreeCredit: false,
+  balance: 0,
+  isAuthenticated: false,
+  passExpiresAt: null,
+  exportsRemaining: 0,
+  hasActivePass: false,
+};
+
+function buildStatus(row: any, isAuthenticated: boolean): CreditStatus {
+  const passExpiresAt: string | null = row?.pass_expires_at ?? null;
+  const hasActivePass = passExpiresAt ? new Date(passExpiresAt).getTime() > Date.now() : false;
+  return {
+    hasUsedFreeCredit: row?.has_used_free_credit ?? false,
+    balance: row?.balance ?? 0,
+    isAuthenticated,
+    passExpiresAt,
+    exportsRemaining: row?.exports_remaining ?? 0,
+    hasActivePass,
+  };
 }
 
 export async function getCreditStatus(): Promise<CreditStatus> {
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    return { hasUsedFreeCredit: false, balance: 0, isAuthenticated: false };
-  }
+  if (!user) return { ...EMPTY };
 
   const { data } = await supabase
     .from("credit_balances")
-    .select("balance, has_used_free_credit")
+    .select("balance, has_used_free_credit, pass_expires_at, exports_remaining")
     .eq("user_id", user.id)
     .maybeSingle();
 
-  return {
-    hasUsedFreeCredit: data?.has_used_free_credit ?? false,
-    balance: data?.balance ?? 0,
-    isAuthenticated: true,
-  };
+  return buildStatus(data, true);
 }
 
 export async function confirmCheckoutSession(sessionId: string): Promise<CreditStatus> {
@@ -33,11 +52,15 @@ export async function confirmCheckoutSession(sessionId: string): Promise<CreditS
   if (error) throw new Error(error.message || "Payment confirmation failed");
   if (data?.error) throw new Error(data.error);
 
-  return {
-    hasUsedFreeCredit: Boolean(data?.hasUsedFreeCredit),
-    balance: Number(data?.balance ?? 0),
-    isAuthenticated: true,
-  };
+  return buildStatus(
+    {
+      balance: Number(data?.balance ?? 0),
+      has_used_free_credit: Boolean(data?.hasUsedFreeCredit),
+      pass_expires_at: data?.passExpiresAt ?? null,
+      exports_remaining: Number(data?.exportsRemaining ?? 0),
+    },
+    true
+  );
 }
 
 export async function markFreeCreditUsed(): Promise<void> {
@@ -62,17 +85,33 @@ export async function markFreeCreditUsed(): Promise<void> {
   }
 }
 
+/**
+ * Attempts to deduct/charge an alignment.
+ * Returns: -1 = no access, 9999 = unlimited pass, N = balance after deduction.
+ */
 export async function deductCredit(): Promise<number> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
   const { data, error } = await supabase.rpc("deduct_credit", { p_user_id: user.id });
   if (error) throw new Error("Failed to deduct credit");
-  if (data === -1) throw new Error("No credits remaining");
-  return data;
+  if (data === -1) throw new Error("No access — purchase the Bypass Fee to continue");
+  return data as number;
 }
 
-export async function createCheckoutSession(pack: "starter" | "power"): Promise<string> {
+/**
+ * Consumes one export quota. Returns remaining exports, or -1 if none.
+ */
+export async function consumeExport(): Promise<number> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data, error } = await supabase.rpc("consume_export" as any, { p_user_id: user.id });
+  if (error) throw new Error("Failed to consume export");
+  return Number(data);
+}
+
+export async function createCheckoutSession(pack: "bypass" = "bypass"): Promise<string> {
   const { data, error } = await supabase.functions.invoke("create-checkout", {
     body: { pack },
   });

@@ -18,6 +18,16 @@ Also produce "tunedBullet" — the rewritten version of the bullet using the tar
 
 IMPORTANT: You MUST respond by calling the provided function tool. Do NOT return plain text.`;
 
+// Owner/test accounts — bypass all anti-abuse checks.
+const ABUSE_ALLOWLIST = new Set<string>([
+  "djcoolmike@gmail.com",
+]);
+
+function isAllowlisted(email: unknown): boolean {
+  if (typeof email !== "string") return false;
+  return ABUSE_ALLOWLIST.has(email.trim().toLowerCase());
+}
+
 function getClientIp(req: Request): string | null {
   const forwarded = req.headers.get("x-forwarded-for");
   if (forwarded) {
@@ -32,7 +42,7 @@ serve(async (req) => {
   }
 
   try {
-    const { bullet, targetRole, fingerprint } = await req.json();
+    const { bullet, targetRole, fingerprint, email } = await req.json();
 
     if (!bullet || typeof bullet !== "string" || bullet.trim().length < 10) {
       return new Response(
@@ -55,32 +65,44 @@ serve(async (req) => {
     const ip = getClientIp(req);
     const fp = typeof fingerprint === "string" && fingerprint.length > 0 ? fingerprint : null;
 
-    // Server-side abuse check
-    const { data: abuseResult, error: abuseErr } = await supabase.rpc("check_free_trial_abuse", {
-      p_fingerprint: fp,
-      p_ip: ip,
-    });
+    // Verify allowlisted email server-side via JWT (don't trust raw body alone).
+    let verifiedEmail: string | null = null;
+    const authHeader = req.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.slice(7);
+      const { data: userData } = await supabase.auth.getUser(token);
+      verifiedEmail = userData.user?.email ?? null;
+    }
+    const allowlisted = isAllowlisted(verifiedEmail) || isAllowlisted(email);
 
-    if (abuseErr) {
-      console.error("abuse check failed:", abuseErr);
-    } else if (abuseResult === "fingerprint_exhausted") {
-      return new Response(
-        JSON.stringify({
-          error:
-            "This device has reached its free alignment limit. Please upgrade to the Bypass Pack to continue.",
-          code: "fingerprint_exhausted",
-        }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    } else if (abuseResult === "ip_rate_limited") {
-      return new Response(
-        JSON.stringify({
-          error:
-            "Free alignment limit reached for your network today. Try again tomorrow or upgrade to the Bypass Pack.",
-          code: "ip_rate_limited",
-        }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Server-side abuse check (skipped for allowlisted accounts)
+    if (!allowlisted) {
+      const { data: abuseResult, error: abuseErr } = await supabase.rpc("check_free_trial_abuse", {
+        p_fingerprint: fp,
+        p_ip: ip,
+      });
+
+      if (abuseErr) {
+        console.error("abuse check failed:", abuseErr);
+      } else if (abuseResult === "fingerprint_exhausted") {
+        return new Response(
+          JSON.stringify({
+            error:
+              "This device has reached its free alignment limit. Please upgrade to the Bypass Pack to continue.",
+            code: "fingerprint_exhausted",
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } else if (abuseResult === "ip_rate_limited") {
+        return new Response(
+          JSON.stringify({
+            error:
+              "Free alignment limit reached for your network today. Try again tomorrow or upgrade to the Bypass Pack.",
+            code: "ip_rate_limited",
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -170,15 +192,17 @@ serve(async (req) => {
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    // Record successful free preview (best-effort, non-blocking semantics)
-    try {
-      await supabase.from("abuse_signals").insert({
-        fingerprint: fp,
-        ip_address: ip,
-        signal_type: "free_preview",
-      });
-    } catch (logErr) {
-      console.error("abuse_signals insert failed:", logErr);
+    // Record successful free preview (best-effort). Skip for allowlisted accounts.
+    if (!allowlisted) {
+      try {
+        await supabase.from("abuse_signals").insert({
+          fingerprint: fp,
+          ip_address: ip,
+          signal_type: "free_preview",
+        });
+      } catch (logErr) {
+        console.error("abuse_signals insert failed:", logErr);
+      }
     }
 
     return new Response(JSON.stringify(result), {

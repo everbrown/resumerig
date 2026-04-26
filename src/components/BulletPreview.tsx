@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { getFingerprint, hasUsedFreeTrial, markTrialUsed } from "@/lib/abuse";
+import { getFingerprint, hasUsedFreeTrial, markTrialUsed, isAllowlistedEmail } from "@/lib/abuse";
 
 interface Translation {
   oldTerm: string;
@@ -32,6 +32,7 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [error, setError] = useState("");
   const [serverLocked, setServerLocked] = useState(false);
+  const [allowlisted, setAllowlisted] = useState(false);
   const [usedCount, setUsedCount] = useState(() => {
     if (hasUsedFreeTrial()) return FREE_LIMIT;
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -39,13 +40,19 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
     return Number.isFinite(n) ? n : 0;
   });
 
-  // Warm up fingerprint on mount so it's ready when user submits.
+  // Warm up fingerprint + check if signed-in user is allowlisted.
   useEffect(() => {
     getFingerprint().catch(() => {});
+    supabase.auth.getUser().then(({ data }) => {
+      if (isAllowlistedEmail(data.user?.email)) {
+        setAllowlisted(true);
+        setServerLocked(false);
+      }
+    }).catch(() => {});
   }, []);
 
-  const remaining = Math.max(0, FREE_LIMIT - usedCount);
-  const limitReached = remaining <= 0 || serverLocked;
+  const remaining = allowlisted ? Infinity : Math.max(0, FREE_LIMIT - usedCount);
+  const limitReached = !allowlisted && (remaining <= 0 || serverLocked);
   const canSubmit = bullet.trim().length >= 10 && !loading && !limitReached;
 
   const handlePreview = async () => {
@@ -56,12 +63,16 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
     setResult(null);
 
     try {
-      const fingerprint = await getFingerprint();
+      const fingerprint = allowlisted ? null : await getFingerprint();
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData.user?.email ?? null;
+
       const { data, error: fnError } = await supabase.functions.invoke("preview-bullet", {
         body: {
           bullet: bullet.trim(),
           targetRole: targetRole.trim() || undefined,
           fingerprint,
+          email: userEmail,
         },
       });
 
@@ -76,10 +87,12 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
       }
 
       setResult(data as PreviewResult);
-      const next = usedCount + 1;
-      setUsedCount(next);
-      localStorage.setItem(STORAGE_KEY, String(next));
-      if (next >= FREE_LIMIT) markTrialUsed();
+      if (!allowlisted) {
+        const next = usedCount + 1;
+        setUsedCount(next);
+        localStorage.setItem(STORAGE_KEY, String(next));
+        if (next >= FREE_LIMIT) markTrialUsed();
+      }
     } catch (err: any) {
       setError(err?.message || "Something went wrong. Please try again.");
     } finally {
@@ -109,7 +122,7 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
             </p>
           </div>
           <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5">
-            {remaining}/{FREE_LIMIT} left
+            {allowlisted ? "Unlimited" : `${remaining}/${FREE_LIMIT} left`}
           </span>
         </div>
         <p className="font-body text-base text-primary-foreground/80 mb-4 leading-relaxed">
@@ -166,7 +179,7 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  Translate This Bullet — Free ({remaining} left)
+                  Translate This Bullet — Free {allowlisted ? "(Unlimited)" : `(${remaining} left)`}
                 </>
               )}
             </Button>

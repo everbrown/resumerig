@@ -179,7 +179,7 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  Translate This Bullet — Free ({remaining} left)
+                  Translate This Bullet — Free {allowlisted ? "(Unlimited)" : `(${remaining} left)`}
                 </>
               )}
             </Button>

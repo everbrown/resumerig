@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { getFingerprint, hasUsedFreeTrial, markTrialUsed } from "@/lib/abuse";
+import { getFingerprint, hasUsedFreeTrial, markTrialUsed, isAllowlistedEmail } from "@/lib/abuse";
 
 interface Translation {
   oldTerm: string;

@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ArrowRight, Loader2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
+import { getFingerprint, hasUsedFreeTrial, markTrialUsed } from "@/lib/abuse";
 
 interface Translation {
   oldTerm: string;
@@ -30,14 +31,21 @@ const BulletPreview = ({ onWantMore }: BulletPreviewProps) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [error, setError] = useState("");
+  const [serverLocked, setServerLocked] = useState(false);
   const [usedCount, setUsedCount] = useState(() => {
+    if (hasUsedFreeTrial()) return FREE_LIMIT;
     const raw = localStorage.getItem(STORAGE_KEY);
     const n = raw ? parseInt(raw, 10) : 0;
     return Number.isFinite(n) ? n : 0;
   });
 
+  // Warm up fingerprint on mount so it's ready when user submits.
+  useEffect(() => {
+    getFingerprint().catch(() => {});
+  }, []);
+
   const remaining = Math.max(0, FREE_LIMIT - usedCount);
-  const limitReached = remaining <= 0;
+  const limitReached = remaining <= 0 || serverLocked;
   const canSubmit = bullet.trim().length >= 10 && !loading && !limitReached;
 
   const handlePreview = async () => {

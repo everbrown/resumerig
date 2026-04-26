@@ -54,6 +54,7 @@ const Index = () => {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [paywallReason, setPaywallReason] = useState<"alignments" | "export">("alignments");
   const [needsReview, setNeedsReview] = useState(false);
   const [creditStatus, setCreditStatus] = useState<CreditStatus>(EMPTY_CREDIT_STATUS);
   const [creditLoading, setCreditLoading] = useState(true);
@@ -83,11 +84,17 @@ const Index = () => {
     sessionStorage.removeItem(pendingActionKey);
   };
 
-  const openPaywall = (action?: "analyze" | "outreach") => {
-    if (action) {
-      sessionStorage.setItem(pendingActionKey, action);
-    } else {
+  const openPaywall = (action?: "analyze" | "outreach" | "export") => {
+    if (action === "export") {
+      setPaywallReason("export");
       clearPendingPaidAction();
+    } else {
+      setPaywallReason("alignments");
+      if (action) {
+        sessionStorage.setItem(pendingActionKey, action);
+      } else {
+        clearPendingPaidAction();
+      }
     }
     setShowPaywall(true);
   };
@@ -165,12 +172,15 @@ const Index = () => {
         }
       }
 
-      if (!latestStatus || latestStatus.balance <= 0) {
+      const hasAccessNow = (s: CreditStatus | null) =>
+        !!s && (s.hasActivePass || s.balance > 0);
+
+      if (!hasAccessNow(latestStatus)) {
         for (let attempt = 0; attempt < 10; attempt += 1) {
           latestStatus = await refreshCredits();
           if (cancelled) return;
 
-          if (latestStatus.balance > 0) break;
+          if (hasAccessNow(latestStatus)) break;
 
           await new Promise((resolve) => setTimeout(resolve, 1500));
         }
@@ -178,19 +188,19 @@ const Index = () => {
 
       window.history.replaceState({}, "", "/");
 
-      if (!latestStatus || latestStatus.balance <= 0) {
-        toast.error("Your payment went through, but credits are still syncing. Please refresh in a moment.");
+      if (!hasAccessNow(latestStatus)) {
+        toast.error("Your payment went through, but access is still syncing. Please refresh in a moment.");
         return;
       }
 
       const pendingAction = getPendingPaidAction();
       clearPendingPaidAction();
-      toast.success(`Payment successful! ${latestStatus.balance} credits ready.`);
+      toast.success(`Payment successful! 24h Bypass active.`);
 
       if (pendingAction === "analyze") {
-        await handleAnalyze(latestStatus);
+        await handleAnalyze(latestStatus!);
       } else if (pendingAction === "outreach") {
-        await handleOutreach(latestStatus);
+        await handleOutreach(latestStatus!);
       }
     };
 
@@ -262,8 +272,9 @@ const Index = () => {
     if (!result) return;
 
     const activeCreditStatus = statusOverride ?? await refreshCredits();
+    const hasAccess = activeCreditStatus.hasActivePass || activeCreditStatus.balance > 0;
 
-    if (activeCreditStatus.balance <= 0) {
+    if (!hasAccess) {
       openPaywall("outreach");
       return;
     }
@@ -282,8 +293,8 @@ const Index = () => {
       toast.success("Outreach messages generated!");
     } catch (err: any) {
       const msg = err?.message || "Outreach generation failed.";
-      if (msg.includes("No credits")) {
-        setShowPaywall(true);
+      if (msg.includes("No credits") || msg.includes("No access")) {
+        openPaywall("outreach");
       } else {
         toast.error(msg);
       }

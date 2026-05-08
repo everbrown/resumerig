@@ -560,7 +560,7 @@ const Index = () => {
                   variant="outline"
                   className="gap-2 font-body"
                   onClick={async () => {
-                    if (creditStatus.exportsRemaining <= 0) {
+                    if (creditStatus.balance <= 0) {
                       openPaywall("export");
                       return;
                     }
@@ -571,7 +571,7 @@ const Index = () => {
                         return;
                       }
                       await downloadAsDocx(result.tunedResume);
-                      toast.success("DOCX downloaded!");
+                      toast.success("DOCX downloaded! 1 credit used.");
                       void refreshCredits();
                     } catch {
                       toast.error("Failed to generate DOCX");
@@ -579,14 +579,14 @@ const Index = () => {
                   }}
                 >
                   <FileDown className="h-4 w-4" />
-                  Download .docx{creditStatus.exportsRemaining > 0 ? ` (${creditStatus.exportsRemaining} left)` : ""}
+                  Download .docx (1 credit)
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="gap-2 font-body"
                   onClick={async () => {
-                    if (creditStatus.exportsRemaining <= 0) {
+                    if (creditStatus.balance <= 0) {
                       openPaywall("export");
                       return;
                     }
@@ -597,7 +597,7 @@ const Index = () => {
                         return;
                       }
                       downloadAsPdf(result.tunedResume);
-                      toast.success("PDF downloaded!");
+                      toast.success("PDF downloaded! 1 credit used.");
                       void refreshCredits();
                     } catch {
                       toast.error("Failed to generate PDF");
@@ -605,7 +605,7 @@ const Index = () => {
                   }}
                 >
                   <Download className="h-4 w-4" />
-                  Download .pdf{creditStatus.exportsRemaining > 0 ? ` (${creditStatus.exportsRemaining} left)` : ""}
+                  Download .pdf (1 credit)
                 </Button>
               </div>
             </ResultSection>

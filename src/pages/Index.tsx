@@ -495,7 +495,7 @@ const Index = () => {
             size="lg"
             className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg disabled:opacity-50"
           >
-            {creditStatus.hasActivePass ? "ALIGN MY RESUME" : creditStatus.hasUsedFreeCredit ? "ALIGN — UNLOCK FOR $1.99" : "HARD-CODE MY RESUME — FREE"}
+            {creditStatus.balance > 0 ? "ALIGN MY RESUME" : "GET CREDITS — FROM $1.99"}
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>

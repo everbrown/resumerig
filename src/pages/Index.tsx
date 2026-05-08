@@ -366,7 +366,7 @@ const Index = () => {
               Hard-Code Your Career Pivot for the Price of a Coffee.
             </h2>
             <p className="mt-3 font-body text-base sm:text-lg text-secondary font-semibold">
-              Try 3 alignments for free.
+              Sign up & get 1 Full Alignment free.
             </p>
             <p className="mt-4 font-body text-base sm:text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
                Your experience is elite, but <strong className="text-primary-foreground font-semibold">recruiters won't connect the dots for you.</strong> Resume Rig identifies your target domain and <strong className="text-primary-foreground font-semibold">hard-codes your professional data</strong> to speak its language.
@@ -376,32 +376,22 @@ const Index = () => {
                  <div className="flex items-start justify-between gap-4">
                    <div>
                      <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary-foreground/60">
-                       Your Access
+                       Full Alignments Remaining
                      </p>
                      <p className="mt-2 font-display text-3xl font-bold text-primary-foreground">
-                       {creditLoading
-                         ? "..."
-                         : creditStatus.hasActivePass
-                           ? "24h Pass · Unlimited"
-                           : creditStatus.hasUsedFreeCredit
-                             ? "No active pass"
-                             : "1 free alignment"}
+                       {creditLoading ? "..." : creditStatus.balance}
                      </p>
                    </div>
                    <div className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-mono text-secondary">
-                     {creditStatus.exportsRemaining > 0
-                       ? `${creditStatus.exportsRemaining} export${creditStatus.exportsRemaining !== 1 ? "s" : ""}`
-                       : "0 exports"}
+                     1 credit = 1 alignment
                    </div>
                  </div>
                  <p className="mt-3 font-body text-sm text-primary-foreground/70">
                    {creditLoading
-                     ? "Checking your latest access now."
-                     : creditStatus.hasActivePass && creditStatus.passExpiresAt
-                       ? `Unlimited alignments until ${new Date(creditStatus.passExpiresAt).toLocaleString()}.`
-                       : creditStatus.hasUsedFreeCredit
-                         ? "Get the $1.99 Bypass for unlimited alignments + 1 export."
-                         : "Your first alignment is still available for free."}
+                     ? "Checking your latest balance now."
+                     : creditStatus.balance > 0
+                       ? "Each Full Alignment includes up to 25 bullets. Bullet edits are free; exports cost 1 credit."
+                       : "Out of credits — grab a pack from $1.99 to keep going."}
                  </p>
                </div>
              )}

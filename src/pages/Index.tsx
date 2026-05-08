@@ -173,7 +173,7 @@ const Index = () => {
       }
 
       const hasAccessNow = (s: CreditStatus | null) =>
-        !!s && (s.hasActivePass || s.balance > 0);
+        !!s && s.balance > 0;
 
       if (!hasAccessNow(latestStatus)) {
         for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -189,13 +189,13 @@ const Index = () => {
       window.history.replaceState({}, "", "/");
 
       if (!hasAccessNow(latestStatus)) {
-        toast.error("Your payment went through, but access is still syncing. Please refresh in a moment.");
+        toast.error("Your payment went through, but credits are still syncing. Please refresh in a moment.");
         return;
       }
 
       const pendingAction = getPendingPaidAction();
       clearPendingPaidAction();
-      toast.success(`Payment successful! 24h Bypass active.`);
+      toast.success(`Payment successful! ${latestStatus!.balance} Full Alignment${latestStatus!.balance !== 1 ? "s" : ""} added.`);
 
       if (pendingAction === "analyze") {
         await handleAnalyze(latestStatus!);

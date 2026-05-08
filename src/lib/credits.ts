@@ -1,9 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export type PackId = "single" | "five" | "fifteen";
+
 export interface CreditStatus {
   hasUsedFreeCredit: boolean;
   balance: number;
   isAuthenticated: boolean;
+  // Deprecated fields kept for backward-compat with existing callers; always defaulted.
   passExpiresAt: string | null;
   exportsRemaining: number;
   hasActivePass: boolean;
@@ -19,15 +22,14 @@ const EMPTY: CreditStatus = {
 };
 
 function buildStatus(row: any, isAuthenticated: boolean): CreditStatus {
-  const passExpiresAt: string | null = row?.pass_expires_at ?? null;
-  const hasActivePass = passExpiresAt ? new Date(passExpiresAt).getTime() > Date.now() : false;
+  const balance = row?.balance ?? 0;
   return {
     hasUsedFreeCredit: row?.has_used_free_credit ?? false,
-    balance: row?.balance ?? 0,
+    balance,
     isAuthenticated,
-    passExpiresAt,
-    exportsRemaining: row?.exports_remaining ?? 0,
-    hasActivePass,
+    passExpiresAt: null,
+    exportsRemaining: balance, // exports now share balance pool
+    hasActivePass: false,
   };
 }
 
@@ -37,7 +39,7 @@ export async function getCreditStatus(): Promise<CreditStatus> {
 
   const { data } = await supabase
     .from("credit_balances")
-    .select("balance, has_used_free_credit, pass_expires_at, exports_remaining")
+    .select("balance, has_used_free_credit")
     .eq("user_id", user.id)
     .maybeSingle();
 
@@ -56,38 +58,19 @@ export async function confirmCheckoutSession(sessionId: string): Promise<CreditS
     {
       balance: Number(data?.balance ?? 0),
       has_used_free_credit: Boolean(data?.hasUsedFreeCredit),
-      pass_expires_at: data?.passExpiresAt ?? null,
-      exports_remaining: Number(data?.exportsRemaining ?? 0),
     },
     true
   );
 }
 
 export async function markFreeCreditUsed(): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const { data: existing } = await supabase
-    .from("credit_balances")
-    .select("id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (existing) {
-    await supabase
-      .from("credit_balances")
-      .update({ has_used_free_credit: true, updated_at: new Date().toISOString() } as any)
-      .eq("user_id", user.id);
-  } else {
-    await supabase
-      .from("credit_balances")
-      .insert({ user_id: user.id, has_used_free_credit: true } as any);
-  }
+  // No-op: starter credit is granted as a real balance entry on signup.
+  return;
 }
 
 /**
- * Attempts to deduct/charge an alignment.
- * Returns: -1 = no access, 9999 = unlimited pass, N = balance after deduction.
+ * Deduct 1 credit for a Full Alignment.
+ * Returns: -1 = no access, 9999 = unlimited (allowlist), N = balance after deduction.
  */
 export async function deductCredit(): Promise<number> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -95,12 +78,12 @@ export async function deductCredit(): Promise<number> {
 
   const { data, error } = await supabase.rpc("deduct_credit", { p_user_id: user.id });
   if (error) throw new Error("Failed to deduct credit");
-  if (data === -1) throw new Error("No access — purchase the Bypass Fee to continue");
+  if (data === -1) throw new Error("No credits — purchase a Full Alignment pack to continue");
   return data as number;
 }
 
 /**
- * Consumes one export quota. Returns remaining exports, or -1 if none.
+ * Deduct 1 credit for an Export. Returns remaining balance, or -1 if none.
  */
 export async function consumeExport(): Promise<number> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -111,7 +94,7 @@ export async function consumeExport(): Promise<number> {
   return Number(data);
 }
 
-export async function createCheckoutSession(pack: "bypass" = "bypass"): Promise<string> {
+export async function createCheckoutSession(pack: PackId = "single"): Promise<string> {
   const { data, error } = await supabase.functions.invoke("create-checkout", {
     body: { pack },
   });

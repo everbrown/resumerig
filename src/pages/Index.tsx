@@ -615,7 +615,7 @@ const Index = () => {
               <OnePageResume
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
-                hasCredits={creditStatus.hasActivePass || creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                hasCredits={true}
                  onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />

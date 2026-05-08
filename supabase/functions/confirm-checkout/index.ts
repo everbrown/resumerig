@@ -64,8 +64,7 @@ serve(async (req) => {
       });
     }
 
-    const passHours = parseInt(session.metadata?.pass_hours || "24", 10);
-    const exportsGranted = parseInt(session.metadata?.exports || "1", 10);
+    const creditsGranted = parseInt(session.metadata?.credits || "1", 10);
     const alreadyFulfilled = session.metadata?.fulfilled === "true";
 
     const supabaseAdmin = createClient(
@@ -76,24 +75,17 @@ serve(async (req) => {
     if (!alreadyFulfilled) {
       const { data: existing } = await supabaseAdmin
         .from("credit_balances")
-        .select("exports_remaining, pass_expires_at")
+        .select("balance")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // Extend pass from now (or from current expiry if still active) by passHours
-      const now = Date.now();
-      const currentExpiry = existing?.pass_expires_at ? new Date(existing.pass_expires_at as string).getTime() : 0;
-      const baseTime = currentExpiry > now ? currentExpiry : now;
-      const newExpiry = new Date(baseTime + passHours * 60 * 60 * 1000).toISOString();
-      const newExports = (existing?.exports_remaining ?? 0) + exportsGranted;
+      const newBalance = (existing?.balance ?? 0) + creditsGranted;
 
       if (existing) {
         await supabaseAdmin
           .from("credit_balances")
           .update({
-            pass_expires_at: newExpiry,
-            exports_remaining: newExports,
-            has_used_free_credit: true,
+            balance: newBalance,
             updated_at: new Date().toISOString(),
           } as any)
           .eq("user_id", user.id);
@@ -102,10 +94,8 @@ serve(async (req) => {
           .from("credit_balances")
           .insert({
             user_id: user.id,
-            balance: 0,
-            pass_expires_at: newExpiry,
-            exports_remaining: newExports,
-            has_used_free_credit: true,
+            balance: newBalance,
+            has_used_free_credit: false,
           } as any);
       }
 
@@ -120,15 +110,13 @@ serve(async (req) => {
 
     const { data: balanceRow } = await supabaseAdmin
       .from("credit_balances")
-      .select("balance, has_used_free_credit, pass_expires_at, exports_remaining")
+      .select("balance, has_used_free_credit")
       .eq("user_id", user.id)
       .maybeSingle();
 
     return new Response(JSON.stringify({
       balance: balanceRow?.balance ?? 0,
       hasUsedFreeCredit: balanceRow?.has_used_free_credit ?? false,
-      passExpiresAt: balanceRow?.pass_expires_at ?? null,
-      exportsRemaining: balanceRow?.exports_remaining ?? 0,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

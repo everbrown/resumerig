@@ -631,7 +631,7 @@ const Index = () => {
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
                 pivotPitch={result.pivotPitch}
-                hasCredits={creditStatus.hasActivePass || creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                hasCredits={true}
                  onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />

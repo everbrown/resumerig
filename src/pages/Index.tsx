@@ -300,12 +300,10 @@ const Index = () => {
           ) : user ? (
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-primary-foreground/60">{user.email}</span>
-              <span className={`font-mono text-xs ${creditStatus.hasActivePass ? 'text-secondary' : 'text-primary-foreground/60'} bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5`}>
+              <span className="font-mono text-xs text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5">
                 {creditLoading
                   ? "Syncing..."
-                  : creditStatus.hasActivePass
-                    ? `24h Pass · ${creditStatus.exportsRemaining} export${creditStatus.exportsRemaining !== 1 ? "s" : ""}`
-                    : creditStatus.hasUsedFreeCredit ? "No active pass" : "1 free alignment"}
+                  : `${creditStatus.balance} Full Alignment${creditStatus.balance !== 1 ? "s" : ""} Remaining`}
               </span>
               <button
                 onClick={() => navigate("/dashboard")}

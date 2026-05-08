@@ -201,6 +201,7 @@ const Dashboard = () => {
       </main>
 
       <Footer />
+      <PaywallModal open={showPaywall} onClose={() => { setShowPaywall(false); refreshCredits(); }} />
     </div>
   );
 };

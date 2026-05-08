@@ -173,7 +173,7 @@ const Index = () => {
       }
 
       const hasAccessNow = (s: CreditStatus | null) =>
-        !!s && (s.hasActivePass || s.balance > 0);
+        !!s && s.balance > 0;
 
       if (!hasAccessNow(latestStatus)) {
         for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -189,13 +189,13 @@ const Index = () => {
       window.history.replaceState({}, "", "/");
 
       if (!hasAccessNow(latestStatus)) {
-        toast.error("Your payment went through, but access is still syncing. Please refresh in a moment.");
+        toast.error("Your payment went through, but credits are still syncing. Please refresh in a moment.");
         return;
       }
 
       const pendingAction = getPendingPaidAction();
       clearPendingPaidAction();
-      toast.success(`Payment successful! 24h Bypass active.`);
+      toast.success(`Payment successful! ${latestStatus!.balance} Full Alignment${latestStatus!.balance !== 1 ? "s" : ""} added.`);
 
       if (pendingAction === "analyze") {
         await handleAnalyze(latestStatus!);
@@ -229,8 +229,7 @@ const Index = () => {
     }
 
     const activeCreditStatus = statusOverride ?? await refreshCredits();
-    const hasFirstFree = !activeCreditStatus.hasUsedFreeCredit;
-    const hasAccess = activeCreditStatus.hasActivePass || activeCreditStatus.balance > 0 || hasFirstFree;
+    const hasAccess = activeCreditStatus.balance > 0;
 
     if (!hasAccess) {
       openPaywall("analyze");
@@ -249,15 +248,8 @@ const Index = () => {
       const targetRole = jobDescription.match(/(?:title|role|position)[:\s]+([^\n,]+)/i)?.[1]?.trim();
       saveToHistory(resume, jobDescription, data, targetRole).catch(console.error);
 
-      // Pass active = unlimited, no consumption
-      if (activeCreditStatus.hasActivePass) {
-        // no-op
-      } else if (hasFirstFree) {
-        await markFreeCreditUsed();
-      } else {
-        await deductCredit();
-      }
-      // Refresh status to reflect any change
+      // Charge 1 credit per Full Alignment
+      await deductCredit();
       void refreshCredits();
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
@@ -270,14 +262,8 @@ const Index = () => {
 
   const handleOutreach = async (statusOverride?: CreditStatus) => {
     if (!result) return;
-
-    const activeCreditStatus = statusOverride ?? await refreshCredits();
-    const hasAccess = activeCreditStatus.hasActivePass || activeCreditStatus.balance > 0;
-
-    if (!hasAccess) {
-      openPaywall("outreach");
-      return;
-    }
+    // Outreach is now free — gated only by having a successful alignment.
+    void statusOverride;
 
     setOutreachLoading(true);
     setOutreachResult(null);
@@ -314,12 +300,10 @@ const Index = () => {
           ) : user ? (
             <div className="flex items-center gap-3">
               <span className="font-mono text-xs text-primary-foreground/60">{user.email}</span>
-              <span className={`font-mono text-xs ${creditStatus.hasActivePass ? 'text-secondary' : 'text-primary-foreground/60'} bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5`}>
+              <span className="font-mono text-xs text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-2 py-0.5">
                 {creditLoading
                   ? "Syncing..."
-                  : creditStatus.hasActivePass
-                    ? `24h Pass · ${creditStatus.exportsRemaining} export${creditStatus.exportsRemaining !== 1 ? "s" : ""}`
-                    : creditStatus.hasUsedFreeCredit ? "No active pass" : "1 free alignment"}
+                  : `${creditStatus.balance} Full Alignment${creditStatus.balance !== 1 ? "s" : ""} Remaining`}
               </span>
               <button
                 onClick={() => navigate("/dashboard")}
@@ -382,7 +366,7 @@ const Index = () => {
               Hard-Code Your Career Pivot for the Price of a Coffee.
             </h2>
             <p className="mt-3 font-body text-base sm:text-lg text-secondary font-semibold">
-              Try 3 alignments for free.
+              Sign up & get 1 Full Alignment free.
             </p>
             <p className="mt-4 font-body text-base sm:text-lg text-primary-foreground/60 max-w-2xl mx-auto leading-relaxed">
                Your experience is elite, but <strong className="text-primary-foreground font-semibold">recruiters won't connect the dots for you.</strong> Resume Rig identifies your target domain and <strong className="text-primary-foreground font-semibold">hard-codes your professional data</strong> to speak its language.
@@ -392,32 +376,22 @@ const Index = () => {
                  <div className="flex items-start justify-between gap-4">
                    <div>
                      <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary-foreground/60">
-                       Your Access
+                       Full Alignments Remaining
                      </p>
                      <p className="mt-2 font-display text-3xl font-bold text-primary-foreground">
-                       {creditLoading
-                         ? "..."
-                         : creditStatus.hasActivePass
-                           ? "24h Pass · Unlimited"
-                           : creditStatus.hasUsedFreeCredit
-                             ? "No active pass"
-                             : "1 free alignment"}
+                       {creditLoading ? "..." : creditStatus.balance}
                      </p>
                    </div>
                    <div className="rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-mono text-secondary">
-                     {creditStatus.exportsRemaining > 0
-                       ? `${creditStatus.exportsRemaining} export${creditStatus.exportsRemaining !== 1 ? "s" : ""}`
-                       : "0 exports"}
+                     1 credit = 1 alignment
                    </div>
                  </div>
                  <p className="mt-3 font-body text-sm text-primary-foreground/70">
                    {creditLoading
-                     ? "Checking your latest access now."
-                     : creditStatus.hasActivePass && creditStatus.passExpiresAt
-                       ? `Unlimited alignments until ${new Date(creditStatus.passExpiresAt).toLocaleString()}.`
-                       : creditStatus.hasUsedFreeCredit
-                         ? "Get the $1.99 Bypass for unlimited alignments + 1 export."
-                         : "Your first alignment is still available for free."}
+                     ? "Checking your latest balance now."
+                     : creditStatus.balance > 0
+                       ? "Each Full Alignment includes up to 25 bullets. Bullet edits are free; exports cost 1 credit."
+                       : "Out of credits — grab a pack from $1.99 to keep going."}
                  </p>
                </div>
              )}
@@ -521,7 +495,7 @@ const Index = () => {
             size="lg"
             className="gap-2 bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold text-base px-8 py-6 rounded-xl shadow-[var(--shadow-elevated)] transition-all hover:shadow-lg disabled:opacity-50"
           >
-            {creditStatus.hasActivePass ? "ALIGN MY RESUME" : creditStatus.hasUsedFreeCredit ? "ALIGN — UNLOCK FOR $1.99" : "HARD-CODE MY RESUME — FREE"}
+            {creditStatus.balance > 0 ? "ALIGN MY RESUME" : "GET CREDITS — FROM $1.99"}
             <ArrowRight className="h-5 w-5" />
           </Button>
         </div>
@@ -586,7 +560,7 @@ const Index = () => {
                   variant="outline"
                   className="gap-2 font-body"
                   onClick={async () => {
-                    if (creditStatus.exportsRemaining <= 0) {
+                    if (creditStatus.balance <= 0) {
                       openPaywall("export");
                       return;
                     }
@@ -597,7 +571,7 @@ const Index = () => {
                         return;
                       }
                       await downloadAsDocx(result.tunedResume);
-                      toast.success("DOCX downloaded!");
+                      toast.success("DOCX downloaded! 1 credit used.");
                       void refreshCredits();
                     } catch {
                       toast.error("Failed to generate DOCX");
@@ -605,14 +579,14 @@ const Index = () => {
                   }}
                 >
                   <FileDown className="h-4 w-4" />
-                  Download .docx{creditStatus.exportsRemaining > 0 ? ` (${creditStatus.exportsRemaining} left)` : ""}
+                  Download .docx (1 credit)
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="gap-2 font-body"
                   onClick={async () => {
-                    if (creditStatus.exportsRemaining <= 0) {
+                    if (creditStatus.balance <= 0) {
                       openPaywall("export");
                       return;
                     }
@@ -623,7 +597,7 @@ const Index = () => {
                         return;
                       }
                       downloadAsPdf(result.tunedResume);
-                      toast.success("PDF downloaded!");
+                      toast.success("PDF downloaded! 1 credit used.");
                       void refreshCredits();
                     } catch {
                       toast.error("Failed to generate PDF");
@@ -631,7 +605,7 @@ const Index = () => {
                   }}
                 >
                   <Download className="h-4 w-4" />
-                  Download .pdf{creditStatus.exportsRemaining > 0 ? ` (${creditStatus.exportsRemaining} left)` : ""}
+                  Download .pdf (1 credit)
                 </Button>
               </div>
             </ResultSection>
@@ -641,7 +615,7 @@ const Index = () => {
               <OnePageResume
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
-                hasCredits={creditStatus.hasActivePass || creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                hasCredits={true}
                  onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />
@@ -657,7 +631,7 @@ const Index = () => {
                 tunedResume={result.tunedResume}
                 jobDescription={jobDescription}
                 pivotPitch={result.pivotPitch}
-                hasCredits={creditStatus.hasActivePass || creditStatus.balance > 0 || !creditStatus.hasUsedFreeCredit}
+                hasCredits={true}
                  onCreditsNeeded={() => openPaywall()}
                 onCreditUsed={refreshCredits}
               />

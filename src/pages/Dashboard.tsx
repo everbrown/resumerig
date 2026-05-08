@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getHistory, deleteHistoryEntry, type ResumeHistoryEntry } from "@/lib/resumeHistory";
 import { getCreditStatus, createCheckoutSession, type CreditStatus } from "@/lib/credits";
-import { Clock, Trash2, ArrowLeft, Eye, Sparkles, Coffee, Infinity as InfinityIcon, FileDown } from "lucide-react";
+import { Clock, Trash2, ArrowLeft, Eye, Sparkles, Zap } from "lucide-react";
+import PaywallModal from "@/components/PaywallModal";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import FuelLoop from "@/components/FuelLoop";
@@ -16,6 +17,7 @@ const Dashboard = () => {
   const [history, setHistory] = useState<ResumeHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const [creditStatus, setCreditStatus] = useState<CreditStatus>({
     hasUsedFreeCredit: false,
     balance: 0,
@@ -53,21 +55,7 @@ const Dashboard = () => {
     getCreditStatus().then(setCreditStatus);
   };
 
-  const handlePurchase = async () => {
-    setPurchaseLoading(true);
-    try {
-      const url = await createCheckoutSession("bypass");
-      window.location.href = url;
-    } catch (err: any) {
-      toast.error(err?.message || "Checkout failed");
-    } finally {
-      setPurchaseLoading(false);
-    }
-  };
-
-  const passLabel = creditStatus.hasActivePass && creditStatus.passExpiresAt
-    ? `Pass active until ${new Date(creditStatus.passExpiresAt).toLocaleString()}`
-    : "No active pass";
+  const handleOpenPaywall = () => setShowPaywall(true);
 
   if (authLoading || loading) {
     return (
@@ -96,63 +84,36 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <span className={`font-mono text-sm ${creditStatus.hasActivePass ? 'text-secondary' : 'text-muted-foreground'} bg-secondary/10 border border-secondary/30 rounded-full px-3 py-1`}>
-              {creditStatus.hasActivePass ? "24h Pass Active" : "No Pass"}
-            </span>
-            <span className="font-mono text-xs text-muted-foreground bg-muted/40 border border-border rounded-full px-2 py-1">
-              {creditStatus.exportsRemaining} export{creditStatus.exportsRemaining !== 1 ? "s" : ""}
+            <span className="font-mono text-sm text-secondary bg-secondary/10 border border-secondary/30 rounded-full px-3 py-1">
+              {creditStatus.balance} Full Alignment{creditStatus.balance !== 1 ? "s" : ""} Remaining
             </span>
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl px-6 py-10 space-y-8">
-        {/* Pass status / Buy Bypass Section */}
-        {creditStatus.hasActivePass ? (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border-2 border-secondary/40 bg-secondary/5 p-6"
-          >
-            <div className="flex items-start gap-4">
-              <InfinityIcon className="h-8 w-8 text-secondary shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-display text-lg font-bold text-foreground">Unlimited alignments active</h3>
-                <p className="font-body text-sm text-muted-foreground mt-1">{passLabel}</p>
-                <p className="font-mono text-xs text-secondary mt-2">
-                  {creditStatus.exportsRemaining} export{creditStatus.exportsRemaining !== 1 ? "s" : ""} remaining
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border-2 border-secondary/30 bg-secondary/5 p-6"
-          >
-            <div className="text-center mb-5">
-              <Coffee className="h-8 w-8 text-secondary mx-auto mb-2" />
-              <h3 className="font-display text-lg font-bold text-foreground">Need to align your full resume?</h3>
-              <p className="font-body text-sm text-muted-foreground mt-1">
-                Unlock unlimited alignments for 24 hours + 1 full export.
-              </p>
-            </div>
-            <div className="max-w-xs mx-auto">
-              <button
-                onClick={handlePurchase}
-                disabled={purchaseLoading}
-                className="w-full rounded-xl border-2 border-secondary bg-card p-5 text-center space-y-2 hover:bg-secondary/5 transition-colors"
-              >
-                <p className="font-display text-3xl font-bold text-foreground">$1.99</p>
-                <p className="text-xs font-body text-muted-foreground">24h Bypass + 1 export</p>
-                <span className="inline-block mt-1 text-xs font-mono text-secondary bg-secondary/10 px-3 py-1 rounded-full">
-                  {purchaseLoading ? "Redirecting..." : "Get Bypass"}
-                </span>
-              </button>
-            </div>
-          </motion.div>
-        )}
+        {/* Buy Credits Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border-2 border-secondary/30 bg-secondary/5 p-6"
+        >
+          <div className="text-center mb-5">
+            <Zap className="h-8 w-8 text-secondary mx-auto mb-2" />
+            <h3 className="font-display text-lg font-bold text-foreground">Need more Full Alignments?</h3>
+            <p className="font-body text-sm text-muted-foreground mt-1">
+              1 credit = 1 Full Alignment (up to 25 bullets) or 1 export. Bullet edits are always free.
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <Button
+              onClick={handleOpenPaywall}
+              className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-body font-semibold rounded-xl px-6"
+            >
+              View Packs (from $1.99)
+            </Button>
+          </div>
+        </motion.div>
 
         {/* Referral Panel */}
         <FuelLoop isAuthenticated={!!user} creditBalance={creditStatus.balance} onCreditsChanged={refreshCredits} />
@@ -240,6 +201,7 @@ const Dashboard = () => {
       </main>
 
       <Footer />
+      <PaywallModal open={showPaywall} onClose={() => { setShowPaywall(false); refreshCredits(); }} />
     </div>
   );
 };

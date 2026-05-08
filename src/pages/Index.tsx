@@ -229,8 +229,7 @@ const Index = () => {
     }
 
     const activeCreditStatus = statusOverride ?? await refreshCredits();
-    const hasFirstFree = !activeCreditStatus.hasUsedFreeCredit;
-    const hasAccess = activeCreditStatus.hasActivePass || activeCreditStatus.balance > 0 || hasFirstFree;
+    const hasAccess = activeCreditStatus.balance > 0;
 
     if (!hasAccess) {
       openPaywall("analyze");
@@ -249,15 +248,8 @@ const Index = () => {
       const targetRole = jobDescription.match(/(?:title|role|position)[:\s]+([^\n,]+)/i)?.[1]?.trim();
       saveToHistory(resume, jobDescription, data, targetRole).catch(console.error);
 
-      // Pass active = unlimited, no consumption
-      if (activeCreditStatus.hasActivePass) {
-        // no-op
-      } else if (hasFirstFree) {
-        await markFreeCreditUsed();
-      } else {
-        await deductCredit();
-      }
-      // Refresh status to reflect any change
+      // Charge 1 credit per Full Alignment
+      await deductCredit();
       void refreshCredits();
     } catch (err: any) {
       const msg = err?.message || "Something went wrong. Please try again.";
@@ -270,14 +262,8 @@ const Index = () => {
 
   const handleOutreach = async (statusOverride?: CreditStatus) => {
     if (!result) return;
-
-    const activeCreditStatus = statusOverride ?? await refreshCredits();
-    const hasAccess = activeCreditStatus.hasActivePass || activeCreditStatus.balance > 0;
-
-    if (!hasAccess) {
-      openPaywall("outreach");
-      return;
-    }
+    // Outreach is now free — gated only by having a successful alignment.
+    void statusOverride;
 
     setOutreachLoading(true);
     setOutreachResult(null);

@@ -17,6 +17,7 @@ const Dashboard = () => {
   const [history, setHistory] = useState<ResumeHistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [showPaywall, setShowPaywall] = useState(false);
   const [creditStatus, setCreditStatus] = useState<CreditStatus>({
     hasUsedFreeCredit: false,
     balance: 0,

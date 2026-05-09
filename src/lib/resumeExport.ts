@@ -32,15 +32,26 @@ const SECTION_HEADINGS = [
 const SUPPRESSED_HEADINGS = ["SUMMARY", "PROFESSIONAL SUMMARY", "OBJECTIVE", "PROFILE"];
 
 function isHeadingLine(trimmed: string): boolean {
+  if (!trimmed) return false;
   const upper = trimmed.toUpperCase().replace(/[:\s]+$/g, "");
   if (SECTION_HEADINGS.includes(upper)) return true;
-  return (
+  // Match ResumeDisplay: short, all-letter/space lines that look like section titles
+  if (
     trimmed.length > 2 &&
-    trimmed.length < 60 &&
-    trimmed === trimmed.toUpperCase() &&
-    /[A-Z]/.test(trimmed) &&
+    trimmed.length <= 45 &&
+    /^[A-Za-z][A-Za-z\s/&-]*:?$/.test(trimmed) &&
     !/^\d/.test(trimmed)
-  );
+  ) {
+    // Avoid matching short body sentences — require either all-caps or title-cased section-like phrase
+    if (trimmed === trimmed.toUpperCase()) return true;
+    const cleaned = trimmed.replace(/[:\s]+$/g, "");
+    const words = cleaned.split(/\s+/);
+    if (words.length <= 4 && words.every((w) => /^[A-Z]/.test(w))) {
+      // Heuristic: treat as heading only if it matches a known heading keyword
+      return SECTION_HEADINGS.some((h) => h === cleaned.toUpperCase());
+    }
+  }
+  return false;
 }
 
 function parseResumeSections(text: string): ResumeSection[] {

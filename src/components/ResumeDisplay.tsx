@@ -95,7 +95,7 @@ const ResumeDisplay = ({ text }: ResumeDisplayProps) => {
   }, [text]);
 
   return (
-    <div className="space-y-5 overflow-visible">
+    <div className="space-y-10 overflow-visible">
       {sections.map((section, si) => (
         <div key={si}>
           {section.heading && (

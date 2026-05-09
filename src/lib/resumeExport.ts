@@ -157,16 +157,19 @@ function parseResumeSections(text: string): ResumeSection[] {
   return sections;
 }
 
-/** Sanitize text for jsPDF (Times font supports Latin-1). */
+/** Sanitize text for jsPDF (Times font supports Latin-1). Preserves newlines. */
 function sanitizeForPdf(text: string): string {
   let s = text;
+  s = s.replace(/\r\n?/g, "\n");
   s = s.replace(/[\u2022\u25C6\u25CF\u2666\u00B7\u2043\u25AA\u25AB\u25E6\u2219\u2023]/g, "•");
   s = s.replace(/[\u2018\u2019\u201A]/g, "'");
   s = s.replace(/[\u201C\u201D\u201E]/g, '"');
   s = s.replace(/[\u2013\u2014]/g, "-");
   s = s.replace(/\u2026/g, "...");
-  s = s.replace(/[^\x00-\x7F\u00C0-\u00FF\u2022]/g, " ");
-  s = s.replace(/\s{2,}/g, " ");
+  // Replace unsupported chars with space, but keep newlines and common bullet
+  s = s.replace(/[^\n\x00-\x7F\u00C0-\u00FF\u2022]/g, " ");
+  // Collapse runs of horizontal whitespace only (NOT newlines)
+  s = s.replace(/[ \t]{2,}/g, " ");
   return s;
 }
 

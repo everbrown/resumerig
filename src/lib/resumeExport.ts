@@ -355,22 +355,27 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
 
-  const margin = isOnePage ? 40 : 54; // 0.75"
+  const margin = isOnePage ? 40 : 54; // ~0.75"
   const maxWidth = pageWidth - margin * 2;
-  let y = margin;
 
+  // Match .docx Times 11pt body, 12pt headings, 16pt name, 1.2 line spacing
   const baseFontSize = isOnePage ? 10 : 11;
   const headingFontSize = isOnePage ? 11 : 12;
   const nameFontSize = isOnePage ? 15 : 16;
   const contactFontSize = isOnePage ? 9 : 10;
-  const lineSpacing = isOnePage ? 1.18 : 1.2;
+  const lineSpacing = isOnePage ? 1.18 : 1.22;
 
-  const sectionGapBefore = isOnePage ? 10 : 14;
-  const headingGapAfter = isOnePage ? 5 : 6;
-  const entryTopGap = isOnePage ? 5 : 7;
+  // Match .docx spacing (twips → pts: 20 twips = 1pt)
+  const sectionGapBefore = isOnePage ? 9 : 12;   // 240 twips before heading
+  const headingGapAfter = isOnePage ? 4 : 6;     // 80 twips after heading rule
+  const entryTopGap = isOnePage ? 5 : 7;         // 140 twips before entry
   const bulletIndent = isOnePage ? 14 : 18;
-  const bulletDotX = isOnePage ? 5 : 7;
-  const bulletGap = isOnePage ? 1 : 1.5;
+  const bulletDotX = isOnePage ? 6 : 8;
+  const bulletGap = isOnePage ? 1 : 1.5;         // 20 twips before/after bullet
+  const paragraphGap = isOnePage ? 1 : 1.5;      // 20 twips after body line
+
+  // y is the TOP of the next line. We add fontSize before drawing so the baseline lands correctly.
+  let y = margin;
 
   const ensureSpace = (needed: number) => {
     if (!isOnePage && y + needed > pageHeight - margin) {
@@ -387,9 +392,17 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
       italic?: boolean;
       indent?: number;
       align?: "left" | "center" | "right";
+      afterGap?: number;
     } = {}
   ) => {
-    const { fontSize = baseFontSize, bold = false, italic = false, indent = 0, align = "left" } = opts;
+    const {
+      fontSize = baseFontSize,
+      bold = false,
+      italic = false,
+      indent = 0,
+      align = "left",
+      afterGap = paragraphGap,
+    } = opts;
     const style = bold && italic ? "bolditalic" : bold ? "bold" : italic ? "italic" : "normal";
     pdf.setFontSize(fontSize);
     pdf.setFont("times", style);
@@ -398,50 +411,67 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
     const wrapWidth = maxWidth - indent;
     const lines = pdf.splitTextToSize(text, wrapWidth);
     const lineHeight = fontSize * lineSpacing;
+    const ascent = fontSize * 0.85;
 
-    for (const line of lines) {
-      ensureSpace(lineHeight + 2);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      ensureSpace(lineHeight);
       let x = margin + indent;
       if (align === "center") {
-        const w = pdf.getTextWidth(line);
-        x = (pageWidth - w) / 2;
+        x = (pageWidth - pdf.getTextWidth(line)) / 2;
       } else if (align === "right") {
-        const w = pdf.getTextWidth(line);
-        x = pageWidth - margin - w;
+        x = pageWidth - margin - pdf.getTextWidth(line);
       }
-      pdf.text(line, x, y);
+      pdf.text(line, x, y + ascent);
       y += lineHeight;
     }
+    y += afterGap;
   };
 
   const safeText = sanitizeForPdf(resumeText);
   const { headerLines, bodyText } = extractHeader(safeText);
   const sections = parseResumeSections(bodyText);
 
-  // Header
+  // === Header: centered name + contact ===
   if (headerLines.length > 0) {
-    drawText(headerLines[0].toUpperCase(), { fontSize: nameFontSize, bold: true, align: "center" });
+    drawText(headerLines[0].toUpperCase(), {
+      fontSize: nameFontSize,
+      bold: true,
+      align: "center",
+      afterGap: 3,
+    });
     for (let i = 1; i < headerLines.length; i++) {
-      drawText(headerLines[i], { fontSize: contactFontSize, align: "center" });
+      drawText(headerLines[i], {
+        fontSize: contactFontSize,
+        align: "center",
+        afterGap: 2,
+      });
     }
-    y += 4;
+    y += 6;
   }
 
   for (const section of sections) {
-    const isSuppressed = section.heading && SUPPRESSED_HEADINGS.includes(section.heading.toUpperCase().replace(/[:\s]+$/g, ""));
+    const isSuppressed =
+      section.heading &&
+      SUPPRESSED_HEADINGS.includes(section.heading.toUpperCase().replace(/[:\s]+$/g, ""));
 
     if (section.heading && !isSuppressed) {
       y += sectionGapBefore;
-      ensureSpace(headingFontSize * lineSpacing + 8);
+      const headingHeight = headingFontSize * lineSpacing;
+      ensureSpace(headingHeight + 8);
+
       pdf.setFontSize(headingFontSize);
       pdf.setFont("times", "bold");
       pdf.setTextColor(0, 0, 0);
-      pdf.text(section.heading.toUpperCase(), margin, y);
-      const borderY = y + 3;
+      const ascent = headingFontSize * 0.85;
+      pdf.text(section.heading.toUpperCase(), margin, y + ascent);
+
+      const borderY = y + headingHeight + 1;
       pdf.setDrawColor(0, 0, 0);
-      pdf.setLineWidth(0.6);
+      pdf.setLineWidth(0.7);
       pdf.line(margin, borderY, pageWidth - margin, borderY);
-      y = borderY + headingGapAfter + headingFontSize * 0.5;
+
+      y = borderY + headingGapAfter;
     }
 
     for (const line of section.lines) {
@@ -450,11 +480,11 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
 
       if (isBullet(trimmed)) {
         y += bulletGap;
-        const bulletY = y - baseFontSize * 0.3;
+        // Draw bullet dot aligned with first text line baseline
+        const bulletY = y + baseFontSize * 0.55;
         pdf.setFillColor(0, 0, 0);
         pdf.circle(margin + bulletDotX, bulletY, 1.4, "F");
-        drawText(cleanBullet(trimmed), { indent: bulletIndent });
-        y += bulletGap;
+        drawText(cleanBullet(trimmed), { indent: bulletIndent, afterGap: bulletGap });
       } else if (isEntryLine(trimmed)) {
         y += entryTopGap;
         const parts = trimmed.split("|").map((p) => p.trim()).filter(Boolean);
@@ -464,21 +494,28 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
         if (lastIsDate) {
           const left = parts.slice(0, -1).join(" | ");
           const right = parts[parts.length - 1];
-          ensureSpace(baseFontSize * lineSpacing + 4);
+          const lineHeight = baseFontSize * lineSpacing;
+          ensureSpace(lineHeight);
           pdf.setFontSize(baseFontSize);
-          pdf.setFont("times", "bold");
           pdf.setTextColor(0, 0, 0);
-          // Truncate left if necessary so right fits
+
+          pdf.setFont("times", "italic");
           const rightWidth = pdf.getTextWidth(right);
-          const maxLeftWidth = maxWidth - rightWidth - 12;
+
+          pdf.setFont("times", "bold");
+          const maxLeftWidth = maxWidth - rightWidth - 14;
           let leftDraw = left;
           while (pdf.getTextWidth(leftDraw) > maxLeftWidth && leftDraw.length > 4) {
             leftDraw = leftDraw.slice(0, -2);
           }
-          pdf.text(leftDraw, margin, y);
+          if (leftDraw !== left && !leftDraw.endsWith("…")) leftDraw = leftDraw.replace(/\s*$/, "…");
+          const ascent = baseFontSize * 0.85;
+          pdf.text(leftDraw, margin, y + ascent);
+
           pdf.setFont("times", "italic");
-          pdf.text(right, pageWidth - margin - rightWidth, y);
-          y += baseFontSize * lineSpacing;
+          pdf.text(right, pageWidth - margin - rightWidth, y + ascent);
+
+          y += lineHeight + paragraphGap;
         } else {
           drawText(trimmed, { bold: true });
         }
@@ -490,3 +527,4 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
 
   pdf.save(isOnePage ? "one-page-resume.pdf" : "aligned-resume.pdf");
 }
+

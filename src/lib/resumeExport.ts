@@ -7,13 +7,21 @@ import {
   HeadingLevel,
   LevelFormat,
   BorderStyle,
+  TabStopType,
+  TabStopPosition,
 } from "docx";
 import { saveAs } from "file-saver";
 import { jsPDF } from "jspdf";
 
 /**
- * Parse the tuned resume text into structured sections.
+ * Harvard-style (Classic ATS) resume export.
+ * - Times New Roman, 11pt body, black text
+ * - Centered name + contact header
+ * - ALL CAPS section headings with full-width bottom rule
+ * - Bold entry titles, dates right-aligned via tab stops where possible
+ * - Standard bullets, 0.75" margins
  */
+
 interface ResumeSection {
   heading?: string;
   lines: string[];
@@ -28,55 +36,22 @@ const SECTION_HEADINGS = [
   "PROJECTS", "AWARDS", "VOLUNTEER", "PUBLICATIONS", "INTERESTS",
 ];
 
-// Headings that should be suppressed (not rendered as styled headings) in exports
-const SUPPRESSED_HEADINGS = ["SUMMARY", "PROFESSIONAL SUMMARY", "OBJECTIVE", "PROFILE"];
+// Headings styled but NOT suppressed in Harvard style — recruiters expect "SUMMARY" header
+const SUPPRESSED_HEADINGS: string[] = [];
 
 function isHeadingLine(trimmed: string): boolean {
   if (!trimmed) return false;
   const upper = trimmed.toUpperCase().replace(/[:\s]+$/g, "");
   if (SECTION_HEADINGS.includes(upper)) return true;
-  // Match ResumeDisplay: short, all-letter/space lines that look like section titles
   if (
     trimmed.length > 2 &&
     trimmed.length <= 45 &&
     /^[A-Za-z][A-Za-z\s/&-]*:?$/.test(trimmed) &&
     !/^\d/.test(trimmed)
   ) {
-    // Avoid matching short body sentences — require either all-caps or title-cased section-like phrase
     if (trimmed === trimmed.toUpperCase()) return true;
-    const cleaned = trimmed.replace(/[:\s]+$/g, "");
-    const words = cleaned.split(/\s+/);
-    if (words.length <= 4 && words.every((w) => /^[A-Z]/.test(w))) {
-      // Heuristic: treat as heading only if it matches a known heading keyword
-      return SECTION_HEADINGS.some((h) => h === cleaned.toUpperCase());
-    }
   }
   return false;
-}
-
-function parseResumeSections(text: string): ResumeSection[] {
-  const lines = text.split("\n");
-  const sections: ResumeSection[] = [];
-  let current: ResumeSection = { lines: [] };
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    if (isHeadingLine(trimmed)) {
-      if (current.lines.length > 0 || current.heading) {
-        sections.push(current);
-      }
-      current = { heading: trimmed.replace(/[:\s]+$/g, ""), lines: [] };
-    } else {
-      current.lines.push(line);
-    }
-  }
-
-  if (current.lines.length > 0 || current.heading) {
-    sections.push(current);
-  }
-
-  return sections;
 }
 
 function isBullet(line: string): boolean {
@@ -89,38 +64,120 @@ function cleanBullet(line: string): string {
 
 function isEntryLine(line: string): boolean {
   const trimmed = line.trim();
-  if (trimmed.length >= 80) return false;
+  if (trimmed.length >= 100) return false;
   if (trimmed.includes("|") && trimmed.length > 10) return true;
   if (/\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december)\s+\d{4}/i.test(trimmed)) return true;
   if (/\b\d{4}\s*[-–—]\s*(?:\d{4}|present|current)\b/i.test(trimmed)) return true;
   return false;
 }
 
-/**
- * Sanitize text for jsPDF (Helvetica only supports basic Latin).
- */
+/** Detect contact-info-looking lines (emails, phone numbers, urls, addresses with bullets/pipes). */
+function looksLikeContactLine(trimmed: string): boolean {
+  if (!trimmed) return false;
+  if (/@\S+\.\S+/.test(trimmed)) return true;
+  if (/(\+?\d[\d\s().\-]{7,})/.test(trimmed)) return true;
+  if (/\b(linkedin|github|portfolio|www\.|https?:\/\/)/i.test(trimmed)) return true;
+  if (/[•|·]/.test(trimmed) && trimmed.length < 120) return true;
+  return false;
+}
+
+/** Detect a name line: short, mostly letters, title case or all caps, no numbers or @. */
+function looksLikeName(trimmed: string): boolean {
+  if (!trimmed || trimmed.length > 60) return false;
+  if (/[@\d]/.test(trimmed)) return false;
+  if (isHeadingLine(trimmed)) return false;
+  const words = trimmed.split(/\s+/);
+  if (words.length < 2 || words.length > 5) return false;
+  return words.every((w) => /^[A-Z][a-zA-Z'\-]*$|^[A-Z]+$/.test(w));
+}
+
+/** Split header (name + contact) from body before first heading. */
+function extractHeader(text: string): { headerLines: string[]; bodyText: string } {
+  const lines = text.split("\n");
+  const headerLines: string[] = [];
+  let bodyStart = 0;
+
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed) {
+      if (headerLines.length > 0) {
+        bodyStart = i + 1;
+        break;
+      }
+      continue;
+    }
+    if (isHeadingLine(trimmed)) {
+      bodyStart = i;
+      break;
+    }
+    // Accept name as first non-empty, contact lines as following
+    if (headerLines.length === 0 && looksLikeName(trimmed)) {
+      headerLines.push(trimmed);
+    } else if (headerLines.length > 0 && (looksLikeContactLine(trimmed) || trimmed.length < 100)) {
+      headerLines.push(trimmed);
+      // Stop after 3 header lines to be safe
+      if (headerLines.length >= 3) {
+        bodyStart = i + 1;
+        break;
+      }
+    } else if (headerLines.length === 0) {
+      // No name detected — give up on header extraction
+      break;
+    } else {
+      bodyStart = i;
+      break;
+    }
+  }
+
+  if (headerLines.length === 0) {
+    return { headerLines: [], bodyText: text };
+  }
+  return { headerLines, bodyText: lines.slice(bodyStart).join("\n") };
+}
+
+function parseResumeSections(text: string): ResumeSection[] {
+  const lines = text.split("\n");
+  const sections: ResumeSection[] = [];
+  let current: ResumeSection = { lines: [] };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (isHeadingLine(trimmed)) {
+      if (current.lines.length > 0 || current.heading) {
+        sections.push(current);
+      }
+      current = { heading: trimmed.replace(/[:\s]+$/g, ""), lines: [] };
+    } else {
+      current.lines.push(line);
+    }
+  }
+  if (current.lines.length > 0 || current.heading) {
+    sections.push(current);
+  }
+  return sections;
+}
+
+/** Sanitize text for jsPDF (Times font supports Latin-1). */
 function sanitizeForPdf(text: string): string {
   let s = text;
-  s = s.replace(/[\u00C4\u2022\u25C6\u25CF\u2666\u00B7\u2043\u25AA\u25AB\u25E6\u2219\u00A4\u2023]/g, "|");
-  s = s.replace(/\s*[""]\s*/g, " | ");
+  s = s.replace(/[\u2022\u25C6\u25CF\u2666\u00B7\u2043\u25AA\u25AB\u25E6\u2219\u2023]/g, "•");
   s = s.replace(/[\u2018\u2019\u201A]/g, "'");
   s = s.replace(/[\u201C\u201D\u201E]/g, '"');
   s = s.replace(/[\u2013\u2014]/g, "-");
   s = s.replace(/\u2026/g, "...");
-  s = s.replace(/[^\x00-\x7F\u00C0-\u00FF]/g, () => " ");
-  s = s.replace(/\s*\|\s*\|\s*/g, " | ");
+  s = s.replace(/[^\x00-\x7F\u00C0-\u00FF\u2022]/g, " ");
   s = s.replace(/\s{2,}/g, " ");
-  s = s.replace(/https?:\/\/(www\.)?/g, "");
-  s = s.replace(/\/+(\s|$)/g, "$1");
-  return s.trim();
+  return s;
 }
 
-// Brand color matching the on-screen display
-const BRAND_GREEN = "2B5C3F";
-const BRAND_GREEN_RGB: [number, number, number] = [43, 92, 63];
+// ============== DOCX EXPORT (Harvard style) ==============
+
+const FONT = "Times New Roman";
+const COLOR_BLACK = "000000";
 
 export async function downloadAsDocx(resumeText: string, filename?: string): Promise<void> {
-  const sections = parseResumeSections(resumeText);
+  const { headerLines, bodyText } = extractHeader(resumeText);
+  const sections = parseResumeSections(bodyText);
   const children: Paragraph[] = [];
 
   const numbering = {
@@ -134,9 +191,7 @@ export async function downloadAsDocx(resumeText: string, filename?: string): Pro
             text: "\u2022",
             alignment: AlignmentType.LEFT,
             style: {
-              paragraph: {
-                indent: { left: 540, hanging: 270 },
-              },
+              paragraph: { indent: { left: 360, hanging: 220 } },
             },
           },
         ],
@@ -144,76 +199,123 @@ export async function downloadAsDocx(resumeText: string, filename?: string): Pro
     ],
   };
 
+  // === Header: centered name + contact ===
+  if (headerLines.length > 0) {
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 60 },
+        children: [
+          new TextRun({
+            text: headerLines[0].toUpperCase(),
+            bold: true,
+            size: 32, // 16pt
+            font: FONT,
+            color: COLOR_BLACK,
+            characterSpacing: 40,
+          }),
+        ],
+      })
+    );
+
+    for (let i = 1; i < headerLines.length; i++) {
+      children.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 40 },
+          children: [
+            new TextRun({
+              text: headerLines[i],
+              size: 20, // 10pt
+              font: FONT,
+              color: COLOR_BLACK,
+            }),
+          ],
+        })
+      );
+    }
+  }
+
   for (const section of sections) {
     const isSuppressed = section.heading && SUPPRESSED_HEADINGS.includes(section.heading.toUpperCase().replace(/[:\s]+$/g, ""));
 
     if (section.heading && !isSuppressed) {
-      // Add spacing before heading — generous gap for readability
-      children.push(new Paragraph({ spacing: { before: 360 }, children: [] }));
-
-      // Section heading: uppercase, bold, green, with bottom border — matches on-screen style
       children.push(
         new Paragraph({
-          heading: HeadingLevel.HEADING_2,
-          spacing: { before: 100, after: 180 },
+          spacing: { before: 240, after: 80 },
+          border: {
+            bottom: { style: BorderStyle.SINGLE, size: 6, color: COLOR_BLACK, space: 2 },
+          },
           children: [
             new TextRun({
               text: section.heading.toUpperCase(),
               bold: true,
-              size: 22, // 11pt
-              font: "Calibri",
-              color: BRAND_GREEN,
-              characterSpacing: 80, // wide letter-spacing like the UI
+              size: 24, // 12pt
+              font: FONT,
+              color: COLOR_BLACK,
+              characterSpacing: 30,
             }),
           ],
-          border: {
-            bottom: {
-              style: BorderStyle.SINGLE,
-              size: 4,
-              color: BRAND_GREEN,
-              space: 4,
-            },
-          },
         })
       );
     }
 
     for (const line of section.lines) {
       const trimmed = line.trim();
-      if (!trimmed) {
-        children.push(new Paragraph({ spacing: { before: 40 }, children: [] }));
-        continue;
-      }
+      if (!trimmed) continue;
 
       if (isBullet(trimmed)) {
         children.push(
           new Paragraph({
             numbering: { reference: "bullets", level: 0 },
-            spacing: { before: 30, after: 30, line: 276 }, // 1.15x line spacing
+            spacing: { before: 20, after: 20, line: 264 },
             children: [
               new TextRun({
                 text: cleanBullet(trimmed),
-                size: 21, // 10.5pt
-                font: "Calibri",
-                color: "1E1E1E",
+                size: 22, // 11pt
+                font: FONT,
+                color: COLOR_BLACK,
               }),
             ],
           })
         );
-      } else {
-        const isSubheading = isEntryLine(trimmed);
+      } else if (isEntryLine(trimmed)) {
+        // Try to split "Title | Company | Date" — last segment right-aligned if it looks like a date
+        const parts = trimmed.split("|").map((p) => p.trim()).filter(Boolean);
+        const lastIsDate =
+          parts.length >= 2 &&
+          /\d{4}|present|current/i.test(parts[parts.length - 1]);
 
+        if (lastIsDate) {
+          const left = parts.slice(0, -1).join(" | ");
+          const right = parts[parts.length - 1];
+          children.push(
+            new Paragraph({
+              spacing: { before: 140, after: 20, line: 264 },
+              tabStops: [{ type: TabStopType.RIGHT, position: TabStopPosition.MAX }],
+              children: [
+                new TextRun({ text: left, bold: true, size: 22, font: FONT, color: COLOR_BLACK }),
+                new TextRun({ text: "\t", font: FONT }),
+                new TextRun({ text: right, italics: true, size: 22, font: FONT, color: COLOR_BLACK }),
+              ],
+            })
+          );
+        } else {
+          children.push(
+            new Paragraph({
+              spacing: { before: 140, after: 20, line: 264 },
+              children: [
+                new TextRun({ text: trimmed, bold: true, size: 22, font: FONT, color: COLOR_BLACK }),
+              ],
+            })
+          );
+        }
+      } else {
         children.push(
           new Paragraph({
-            spacing: { before: isSubheading ? 120 : 40, after: 30, line: 276 },
+            spacing: { before: 20, after: 20, line: 264 },
             children: [
-              new TextRun({
-                text: trimmed,
-                size: isSubheading ? 22 : 21,
-                font: "Calibri",
-                bold: isSubheading,
-                color: "1E1E1E",
-              }),
+              new TextRun({ text: trimmed, size: 22, font: FONT, color: COLOR_BLACK }),
             ],
           })
         );
@@ -224,11 +326,7 @@ export async function downloadAsDocx(resumeText: string, filename?: string): Pro
   const doc = new Document({
     numbering,
     styles: {
-      default: {
-        document: {
-          run: { font: "Calibri", size: 21 },
-        },
-      },
+      default: { document: { run: { font: FONT, size: 22 } } },
     },
     sections: [
       {
@@ -247,41 +345,32 @@ export async function downloadAsDocx(resumeText: string, filename?: string): Pro
   saveAs(blob, filename || "aligned-resume.docx");
 }
 
+// ============== PDF EXPORT (Harvard style) ==============
+
 export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean }): void {
   const isOnePage = options?.onePage ?? false;
   const format = isOnePage ? "a4" : "letter";
-
   const pdf = new jsPDF({ unit: "pt", format });
 
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
 
-  // Match DOCX: 0.75in margins (1080 twips = 54pt)
-  const margin = isOnePage ? 40 : 54;
+  const margin = isOnePage ? 40 : 54; // 0.75"
   const maxWidth = pageWidth - margin * 2;
   let y = margin;
 
-  // Match DOCX: Calibri 10.5pt body (size 21 half-pts), 11pt headings (size 22)
-  const baseFontSize = isOnePage ? 9.5 : 10.5;
-  const headingFontSize = isOnePage ? 10 : 11;
-  // DOCX line spacing 276 = 1.15x; in PDF pts this means lineHeight = fontSize * 1.15
-  const lineSpacing = isOnePage ? 1.2 : 1.15;
-  // DOCX spacing before heading: 200 + 100 twips = 300 twips ≈ 15pt
-  const sectionGapBefore = isOnePage ? 12 : 24;
-  // DOCX spacing after heading: increased for readability
-  const headingGapAfter = isOnePage ? 7 : 10;
-  // DOCX entry spacing before: 120 twips ≈ 6pt
-  const entryTopGap = isOnePage ? 4 : 6;
-  // DOCX bullet indent: left 540 twips ≈ 27pt, hanging 270 ≈ 13.5pt → text starts at ~27pt
-  const bulletTextIndent = isOnePage ? 18 : 27;
-  const bulletDotX = isOnePage ? 8 : 10; // dot position within the indent
-  const bulletRadius = 1.5;
-  // DOCX bullet spacing before/after: 30 twips ≈ 1.5pt
-  const bulletGap = isOnePage ? 1 : 1.5;
-  // DOCX empty paragraph spacing: 40 twips ≈ 2pt
-  const emptyGap = isOnePage ? 1.5 : 2;
+  const baseFontSize = isOnePage ? 10 : 11;
+  const headingFontSize = isOnePage ? 11 : 12;
+  const nameFontSize = isOnePage ? 15 : 16;
+  const contactFontSize = isOnePage ? 9 : 10;
+  const lineSpacing = isOnePage ? 1.18 : 1.2;
 
-  const sections = parseResumeSections(sanitizeForPdf(resumeText));
+  const sectionGapBefore = isOnePage ? 10 : 14;
+  const headingGapAfter = isOnePage ? 5 : 6;
+  const entryTopGap = isOnePage ? 5 : 7;
+  const bulletIndent = isOnePage ? 14 : 18;
+  const bulletDotX = isOnePage ? 5 : 7;
+  const bulletGap = isOnePage ? 1 : 1.5;
 
   const ensureSpace = (needed: number) => {
     if (!isOnePage && y + needed > pageHeight - margin) {
@@ -290,87 +379,111 @@ export function downloadAsPdf(resumeText: string, options?: { onePage?: boolean 
     }
   };
 
-  const addText = (
+  const drawText = (
     text: string,
     opts: {
       fontSize?: number;
       bold?: boolean;
+      italic?: boolean;
       indent?: number;
-      color?: [number, number, number];
+      align?: "left" | "center" | "right";
     } = {}
   ) => {
-    const { fontSize = baseFontSize, bold = false, indent = 0, color = [30, 30, 30] } = opts;
-
+    const { fontSize = baseFontSize, bold = false, italic = false, indent = 0, align = "left" } = opts;
+    const style = bold && italic ? "bolditalic" : bold ? "bold" : italic ? "italic" : "normal";
     pdf.setFontSize(fontSize);
-    pdf.setFont("helvetica", bold ? "bold" : "normal");
-    pdf.setTextColor(...color);
+    pdf.setFont("times", style);
+    pdf.setTextColor(0, 0, 0);
 
-    const lines = pdf.splitTextToSize(text, maxWidth - indent);
+    const wrapWidth = maxWidth - indent;
+    const lines = pdf.splitTextToSize(text, wrapWidth);
     const lineHeight = fontSize * lineSpacing;
 
     for (const line of lines) {
       ensureSpace(lineHeight + 2);
-      pdf.text(line, margin + indent, y);
+      let x = margin + indent;
+      if (align === "center") {
+        const w = pdf.getTextWidth(line);
+        x = (pageWidth - w) / 2;
+      } else if (align === "right") {
+        const w = pdf.getTextWidth(line);
+        x = pageWidth - margin - w;
+      }
+      pdf.text(line, x, y);
       y += lineHeight;
     }
   };
+
+  const safeText = sanitizeForPdf(resumeText);
+  const { headerLines, bodyText } = extractHeader(safeText);
+  const sections = parseResumeSections(bodyText);
+
+  // Header
+  if (headerLines.length > 0) {
+    drawText(headerLines[0].toUpperCase(), { fontSize: nameFontSize, bold: true, align: "center" });
+    for (let i = 1; i < headerLines.length; i++) {
+      drawText(headerLines[i], { fontSize: contactFontSize, align: "center" });
+    }
+    y += 4;
+  }
 
   for (const section of sections) {
     const isSuppressed = section.heading && SUPPRESSED_HEADINGS.includes(section.heading.toUpperCase().replace(/[:\s]+$/g, ""));
 
     if (section.heading && !isSuppressed) {
-      // Spacing before heading paragraph
       y += sectionGapBefore;
-      ensureSpace(30);
-
-      // Heading: uppercase, bold, brand green, with letter-spacing
+      ensureSpace(headingFontSize * lineSpacing + 8);
       pdf.setFontSize(headingFontSize);
-      pdf.setFont("helvetica", "bold");
-      pdf.setTextColor(...BRAND_GREEN_RGB);
-
-      const headingText = section.heading.toUpperCase();
-      const charSpacing = isOnePage ? 2.5 : 4.0;
-      let xPos = margin;
-      for (let i = 0; i < headingText.length; i++) {
-        pdf.text(headingText[i], xPos, y);
-        xPos += pdf.getTextWidth(headingText[i]) + charSpacing;
-      }
-
-      // Bottom border in brand green
-      const borderY = y + 4;
-      pdf.setDrawColor(...BRAND_GREEN_RGB);
-      pdf.setLineWidth(0.75);
+      pdf.setFont("times", "bold");
+      pdf.setTextColor(0, 0, 0);
+      pdf.text(section.heading.toUpperCase(), margin, y);
+      const borderY = y + 3;
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.6);
       pdf.line(margin, borderY, pageWidth - margin, borderY);
-
-      // Gap after border
-      y = borderY + headingGapAfter;
+      y = borderY + headingGapAfter + headingFontSize * 0.5;
     }
 
     for (const line of section.lines) {
       const trimmed = line.trim();
-      if (!trimmed) {
-        y += emptyGap;
-        continue;
-      }
+      if (!trimmed) continue;
 
       if (isBullet(trimmed)) {
-        y += bulletGap; // before spacing
-        // Filled circle bullet matching DOCX bullet style
-        const bulletY = y - baseFontSize * 0.28;
-        pdf.setFillColor(30, 30, 30);
-        pdf.circle(margin + bulletDotX, bulletY, bulletRadius, "F");
-        addText(cleanBullet(trimmed), { indent: bulletTextIndent });
-        y += bulletGap; // after spacing
-      } else {
-        const isEntry = isEntryLine(trimmed);
-        if (isEntry) {
-          y += entryTopGap;
-        }
-        addText(trimmed, {
-          bold: isEntry,
-          fontSize: isEntry ? baseFontSize + 0.5 : baseFontSize,
-        });
         y += bulletGap;
+        const bulletY = y - baseFontSize * 0.3;
+        pdf.setFillColor(0, 0, 0);
+        pdf.circle(margin + bulletDotX, bulletY, 1.4, "F");
+        drawText(cleanBullet(trimmed), { indent: bulletIndent });
+        y += bulletGap;
+      } else if (isEntryLine(trimmed)) {
+        y += entryTopGap;
+        const parts = trimmed.split("|").map((p) => p.trim()).filter(Boolean);
+        const lastIsDate =
+          parts.length >= 2 && /\d{4}|present|current/i.test(parts[parts.length - 1]);
+
+        if (lastIsDate) {
+          const left = parts.slice(0, -1).join(" | ");
+          const right = parts[parts.length - 1];
+          ensureSpace(baseFontSize * lineSpacing + 4);
+          pdf.setFontSize(baseFontSize);
+          pdf.setFont("times", "bold");
+          pdf.setTextColor(0, 0, 0);
+          // Truncate left if necessary so right fits
+          const rightWidth = pdf.getTextWidth(right);
+          const maxLeftWidth = maxWidth - rightWidth - 12;
+          let leftDraw = left;
+          while (pdf.getTextWidth(leftDraw) > maxLeftWidth && leftDraw.length > 4) {
+            leftDraw = leftDraw.slice(0, -2);
+          }
+          pdf.text(leftDraw, margin, y);
+          pdf.setFont("times", "italic");
+          pdf.text(right, pageWidth - margin - rightWidth, y);
+          y += baseFontSize * lineSpacing;
+        } else {
+          drawText(trimmed, { bold: true });
+        }
+      } else {
+        drawText(trimmed);
       }
     }
   }

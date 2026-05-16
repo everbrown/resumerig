@@ -1,0 +1,16 @@
+# ResumeRig
+
+> AI-powered resume translator that re-engineers your experience for every job you target, finds the hiring manager on LinkedIn, and drafts your outreach pitch.
+
+ResumeRig (resumerig.ai) helps job seekers align their resume to specific job descriptions using a methodology called "Domain Alignment." It generates ATS-optimized resumes, cover letters, and outreach messages.
+
+## Pages
+
+- [Home](/): Resume translator, ATS scoring, cover letter and outreach generation.
+- [Sign in](/auth): Create an account or sign in.
+- [Contact](/contact): Get in touch with the ResumeRig team.
+
+## Optional
+
+- [Privacy Policy](/privacy): How we handle your data.
+- [Terms of Service](/terms): Terms and conditions of use.

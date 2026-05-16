@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import FuelLoop from "@/components/FuelLoop";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 
 const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
@@ -67,6 +68,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO title="Dashboard — ResumeRig" description="Your resume history, credits, and ATS-aligned drafts." path="/dashboard" noindex />
       <header className="border-b border-border bg-card">
         <div className="mx-auto max-w-4xl px-6 py-6 flex items-center justify-between">
           <div className="flex items-center gap-3">

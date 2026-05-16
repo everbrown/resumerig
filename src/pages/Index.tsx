@@ -30,6 +30,7 @@ import { confirmCheckoutSession, getCreditStatus, markFreeCreditUsed, deductCred
 import { downloadAsDocx, downloadAsPdf } from "@/lib/resumeExport";
 import { saveToHistory } from "@/lib/resumeHistory";
 import { redeemReferralCode } from "@/lib/referrals";
+import SEO from "@/components/SEO";
 
 const EMPTY_CREDIT_STATUS: CreditStatus = {
   hasUsedFreeCredit: false,
@@ -291,6 +292,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title="ResumeRig — AI Resume Translator for Every Job"
+        description="AI resume translator that re-engineers your experience for every job, finds the hiring manager, and drafts your pitch."
+        path="/"
+      />
       {/* Hero */}
       <header className="relative overflow-hidden" style={{ background: 'var(--gradient-hero)' }}>
         {/* Auth bar */}

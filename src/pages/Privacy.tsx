@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, Sparkles } from "lucide-react";
+import SEO from "@/components/SEO";
 
 const Privacy = () => {
   const effectiveDate = "March 28, 2026";
@@ -7,6 +8,7 @@ const Privacy = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO title="Privacy Policy — ResumeRig" description="How ResumeRig collects, uses, and protects your data." path="/privacy" />
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="mx-auto max-w-4xl px-6 py-6 flex items-center justify-between">

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import Footer from "@/components/Footer";
+import SEO from "@/components/SEO";
 
 const Contact = () => {
   const [name, setName] = useState("");
@@ -68,6 +69,7 @@ const Contact = () => {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      <SEO title="Contact — ResumeRig" description="Get in touch with the ResumeRig team. Questions, feedback, or support." path="/contact" />
       <header className="border-b border-border bg-card px-6 py-4">
         <div className="mx-auto flex max-w-4xl items-center justify-between">
           <Link to="/" className="flex items-center gap-2">

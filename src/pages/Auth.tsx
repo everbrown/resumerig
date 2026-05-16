@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Mail, Lock, ArrowRight, ArrowLeft, Sparkles } from "lucide-react";
+import SEO from "@/components/SEO";
 
 type AuthView = "login" | "signup" | "forgot";
 
@@ -95,6 +96,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <SEO title="Sign in — ResumeRig" description="Sign in or create your ResumeRig account to align your resume to any job." path="/auth" noindex />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
